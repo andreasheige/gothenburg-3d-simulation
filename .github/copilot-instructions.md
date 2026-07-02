@@ -32,11 +32,11 @@ src/
 ├── app/               # App shell (Canvas, Suspense, scene routing)
 ├── main.tsx           # Entry point; mounts <App>, imports styles.css
 ├── core/              # Stack-agnostic engine foundations
-│   ├── config/        # world.ts (TILE grid, tx/tz, COLORS), items.ts
+│   ├── config/        # world.ts (COLORS palette, DAY_LENGTH), items.ts
 │   ├── types/         # ids.ts (string-literal unions), domain.ts (interfaces), index.ts barrel
-│   ├── math/          # path.ts (Path build/sample/nearest)
-│   └── systems/       # input.ts, registry.ts, worldgen.ts (buildings + collision)
-├── domain/            # Pure typed game data (no React): districts, transit, venues, streets, landmarks, interiors
+│   ├── math/          # path.ts (build/sample/nearest on metric [x,z] polylines)
+│   └── systems/       # input.ts, registry.ts, geoWorld.ts (OSM-derived collision + routes)
+├── domain/            # Pure typed game data (no React): venues, landmarks, interiors, geo/ (OSM snapshot)
 ├── state/             # store.ts — zustand store + non-reactive `player` transform
 ├── shared/            # Reusable, feature-agnostic building blocks
 │   ├── three/         # Character, BillboardLabel (R3F primitives)
@@ -45,7 +45,7 @@ src/
 └── features/          # One folder per concern; each owns its slice
     ├── world/         # WorldScene.tsx + components/ (Ground, Water, Roads, Buildings, Landmarks, StreetLabels, VenueDoors, Lighting)
     ├── player/        # Player controller
-    ├── transit/       # TramSystem (trams + buses)
+    ├── transit/       # TramSystem (trams on OSM routes + river ferries)
     ├── npcs/          # Pedestrians (instanced), Seagulls (boids)
     ├── interiors/     # InteriorScene (enterable bars/clubs)
     ├── systems/       # Systems (proximity, time, wanted, interaction keys)
@@ -87,8 +87,9 @@ Practical consequences:
 - **`noPropertyAccessFromIndexSignature`**: index-signature access uses brackets, not dots.
 - **Ids are string-literal unions** in `core/types/ids.ts` — the single source of truth. Data files
   in `domain/` must conform. Add new ids there before using them.
-- Coordinates are documentation-level `Tile` / `World = number` aliases (not branded). Convert with
-  `tx(cx)` / `tz(cy)` from `@/core/config/world`.
+- Coordinates are documentation-level `World = number` metres (not branded). **1 world unit = 1
+  metre; North is `-Z`, East is `+X`.** Convert real lon/lat with `project(lon, lat)` from
+  `@/domain/geo/meta`. There is no longer a tile grid.
 - ESLint enforces `no-useless-assignment` — don't initialize a variable then immediately reassign it
   in a `do/while`; declare with a type annotation instead.
 
@@ -102,6 +103,23 @@ Practical consequences:
   `useRef<THREE.InstancedMesh>(null)` and guard `if (!ref.current) return` in `useFrame`.
 - Geometry elements must not take a `rotation` prop — rotate the parent `<mesh>` instead.
 - Reuse the shared `<Character>` avatar (torso/head/beanie/legs) for any humanoid.
+
+## Geo / OSM world (`domain/geo/` + `core/systems/geoWorld.ts`)
+
+- The city is real OpenStreetMap data for central Gothenburg, fetched by
+  `scripts/fetch-osm.mjs` (`node scripts/fetch-osm.mjs`) into a committed snapshot
+  `public/geo/gothenburg.json` (~6.4 MB) plus an auto-generated `src/domain/geo/meta.ts`
+  (projection constants + `project()`). **Do not hand-edit `meta.ts`**; re-run the script to refresh.
+- `domain/geo/snapshot.ts` types the snapshot and loads it at runtime (`loadSnapshot()`).
+  Coordinates in the JSON are already projected to world metres as `[x, z]`.
+- `core/systems/geoWorld.ts` derives the queryable `GeoWorld` (building AABB collision `blocked()`,
+  `nearestHood()`, stitched `tramRoutes`, `ferryRoutes`, world half-extents). Access it via `geo()`;
+  it throws before `loadGeoWorld()` resolves.
+- **App awaits `loadGeoWorld()` and gates `<WorldScene>` on it** (Loader shown meanwhile), so any
+  component/system rendered inside the city scene may call `geo()` safely. `resolveSpawn()` snaps the
+  player to a walkable spot near Brunnsparken once loaded.
+- World rendering merges geometry for performance (`features/world/geometry.ts`): extruded building
+  footprints, flat area polygons (parks/squares/water), and road ribbons — one mesh per layer.
 
 ## State store (`state/store.ts`)
 
