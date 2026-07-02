@@ -72,8 +72,8 @@ export interface Venue {
   readonly id: string;
   readonly name: string;
   readonly kind: VenueKind;
-  readonly cx: Tile;
-  readonly cy: Tile;
+  readonly x: World;
+  readonly z: World;
   readonly theme: VenueTheme;
   readonly sells: readonly ItemId[];
 }
@@ -83,8 +83,8 @@ export interface Shop {
   readonly id: string;
   readonly name: string;
   readonly kind: ShopKind;
-  readonly cx: Tile;
-  readonly cy: Tile;
+  readonly x: World;
+  readonly z: World;
   readonly sells: readonly ItemId[];
   readonly buysLoot?: boolean;
 }
@@ -94,8 +94,8 @@ export interface Landmark {
   readonly id: string;
   readonly name: string;
   readonly type: LandmarkType;
-  readonly cx: Tile;
-  readonly cy: Tile;
+  readonly x: World;
+  readonly z: World;
 }
 
 /** A floating street-name label. */

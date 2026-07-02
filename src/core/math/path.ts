@@ -1,6 +1,4 @@
 import * as THREE from 'three';
-import { TILE } from '@/core/config/world';
-import type { TilePoint } from '@/core/types';
 
 /** A sampled world-space polyline with cumulative arc-lengths for constant-speed traversal. */
 export interface Path {
@@ -16,15 +14,16 @@ export interface PathSample {
 }
 
 /**
- * Build a smooth world-space polyline from tile waypoints, sampling every ~TILE units.
+ * Build a world-space polyline from metric `[x, z]` waypoints, resampling long
+ * segments so traversal stays smooth. Coordinates are already in world metres.
  */
-export function buildPath(waypoints: readonly TilePoint[], y = 0.3): Path {
-  const raw = waypoints.map(([cx, cy]) => new THREE.Vector3(cx * TILE + TILE / 2, y, cy * TILE + TILE / 2));
+export function buildPathXZ(waypoints: readonly (readonly [number, number])[], y = 0.3, step = 12): Path {
+  const raw = waypoints.map(([x, z]) => new THREE.Vector3(x, y, z));
   const pts: THREE.Vector3[] = [];
   for (let i = 0; i < raw.length - 1; i++) {
     const a = raw[i]!;
     const b = raw[i + 1]!;
-    const steps = Math.max(1, Math.round(a.distanceTo(b) / TILE));
+    const steps = Math.max(1, Math.round(a.distanceTo(b) / step));
     for (let s = 0; s < steps; s++) pts.push(a.clone().lerp(b, s / steps));
   }
   const last = raw[raw.length - 1];

@@ -1,29 +1,5 @@
-import type { Tile, World } from '@/core/types';
-
-// Core world constants and the tile -> 3D world mapping.
-// The tile grid is reused from the original 2D game so the geography stays faithful.
-
-/** World units per tile. */
-export const TILE = 4;
-export const COLS = 104;
-export const ROWS = 68;
-export const WORLD_W = COLS * TILE;
-export const WORLD_D = ROWS * TILE;
-
-/** River band (Göta Älv) occupies tile rows 8..11 across the whole width. */
-export const RIVER_ROW0 = 8;
-/** Exclusive upper bound of the river band. */
-export const RIVER_ROW1 = 12;
-
-/** Convert tile coords to the world-space centre of that tile. Y is up. */
-export function tileToWorld(cx: Tile, cy: Tile): { x: World; z: World } {
-  return { x: cx * TILE + TILE / 2, z: cy * TILE + TILE / 2 };
-}
-
-/** Tile column -> world X (tile centre). */
-export const tx = (cx: Tile): World => cx * TILE + TILE / 2;
-/** Tile row -> world Z (tile centre). */
-export const tz = (cy: Tile): World => cy * TILE + TILE / 2;
+// Core world constants. Geometry now comes from the OSM snapshot (see
+// src/domain/geo), so this module only holds palette + time-of-day config.
 
 /** One in-game day lasts this many real seconds. */
 export const DAY_LENGTH = 180;
@@ -41,4 +17,5 @@ export const COLORS = {
   park: '#4f7a3d',
   sand: '#c9b98f',
   bridge: '#5a5148',
+  ground: '#2f3a30',
 } as const;
