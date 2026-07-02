@@ -174,7 +174,7 @@ function Ferry({ path, index }: { path: Path; index: number }): React.JSX.Elemen
   );
 }
 
-const TRAMS_PER_LINE = 2;
+const TRAMS_PER_LINE = 3;
 
 export function TramSystem(): React.JSX.Element {
   const trams = useMemo<TramConfig[]>(() => {
