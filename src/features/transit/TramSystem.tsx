@@ -1,61 +1,79 @@
 import { useMemo, useRef, useEffect } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
-import { TRAM_LINES, BUS_LINES, STATIONS } from '@/domain/transit';
-import { tx, tz } from '@/core/config/world';
-import { buildPath, samplePath, nearestOnPath } from '@/core/math/path';
+import type { Pt } from '@/domain/geo/snapshot';
+import { geo } from '@/core/systems/geoWorld';
+import { buildPathXZ, samplePath } from '@/core/math/path';
 import type { Path } from '@/core/math/path';
 import { registry } from '@/core/systems/registry';
 import { player } from '@/state/store';
-import type { BusLine, TramLine, TramRuntime } from '@/core/types';
+import type { TramRuntime } from '@/core/types';
 
 interface StopDist {
   name: string;
   d: number;
 }
 
-interface VehicleConfig {
-  line: TramLine | BusLine;
+interface LineRef {
+  id: string;
+  name: string;
+  color: string;
+}
+
+interface TramConfig {
+  line: LineRef;
   path: Path;
   stops: readonly StopDist[];
 }
 
-function VehicleMesh({ color, length, tram }: { color: string; length: number; tram: boolean }): React.JSX.Element {
+// Longest contiguous run of a route polyline that stays inside the world box, so
+// trams travel the central city instead of disappearing toward the suburbs.
+function longestInBounds(path: readonly Pt[], hx: number, hz: number): Pt[] {
+  const m = 150;
+  let best: Pt[] = [];
+  let cur: Pt[] = [];
+  for (const p of path) {
+    if (Math.abs(p[0]) < hx + m && Math.abs(p[1]) < hz + m) {
+      cur.push(p);
+      if (cur.length > best.length) best = cur;
+    } else {
+      cur = [];
+    }
+  }
+  return best;
+}
+
+function TramMesh({ color, length }: { color: string; length: number }): React.JSX.Element {
   return (
     <group>
-      {/* lower body */}
-      <mesh position={[0, 1.0, 0]} castShadow>
-        <boxGeometry args={[2.3, 1.6, length]} />
-        <meshStandardMaterial color={tram ? '#eef2f5' : color} metalness={0.2} roughness={0.5} />
+      <mesh position={[0, 1.6, 0]} castShadow>
+        <boxGeometry args={[2.4, 1.7, length]} />
+        <meshStandardMaterial color="#eef2f5" metalness={0.2} roughness={0.5} />
       </mesh>
-      {/* upper / roof in line colour */}
-      <mesh position={[0, 2.05, 0]} castShadow>
-        <boxGeometry args={[2.15, 0.7, length - 0.2]} />
+      <mesh position={[0, 2.7, 0]} castShadow>
+        <boxGeometry args={[2.24, 0.7, length - 0.2]} />
         <meshStandardMaterial color={color} metalness={0.3} roughness={0.4} />
       </mesh>
-      {/* window band */}
-      <mesh position={[0, 1.55, 0]}>
-        <boxGeometry args={[2.34, 0.7, length - 0.6]} />
+      <mesh position={[0, 2.15, 0]}>
+        <boxGeometry args={[2.44, 0.8, length - 0.6]} />
         <meshStandardMaterial color="#1c2732" metalness={0.5} roughness={0.2} emissive="#2a3b49" emissiveIntensity={0.4} />
       </mesh>
-      {/* front/back light */}
-      <mesh position={[0, 1.2, length / 2 + 0.05]}>
-        <boxGeometry args={[1.8, 0.3, 0.1]} />
+      <mesh position={[0, 1.7, length / 2 + 0.05]}>
+        <boxGeometry args={[1.9, 0.3, 0.1]} />
         <meshStandardMaterial color="#fff6d0" emissive="#fff2b0" emissiveIntensity={0.9} />
       </mesh>
     </group>
   );
 }
 
-interface VehicleProps extends VehicleConfig {
+interface TramProps extends TramConfig {
   index: number;
   count: number;
-  tram: boolean;
 }
 
-function Vehicle({ line, path, stops, index, count, tram }: VehicleProps): React.JSX.Element {
+function Tram({ line, path, stops, index, count }: TramProps): React.JSX.Element {
   const groupRef = useRef<THREE.Group>(null);
-  const speed = tram ? 9 : 7;
+  const speed = 12;
   const runtime = useRef<TramRuntime>({
     line,
     dir: (index % 2 === 0 ? 1 : -1) as 1 | -1,
@@ -68,13 +86,12 @@ function Vehicle({ line, path, stops, index, count, tram }: VehicleProps): React
   }).current;
 
   useEffect(() => {
-    if (!tram) return;
     registry.trams.push(runtime);
     return () => {
       const i = registry.trams.indexOf(runtime);
       if (i >= 0) registry.trams.splice(i, 1);
     };
-  }, [tram, runtime]);
+  }, [runtime]);
 
   useFrame((_, dtRaw) => {
     const dt = Math.min(dtRaw, 0.05);
@@ -93,9 +110,8 @@ function Vehicle({ line, path, stops, index, count, tram }: VehicleProps): React
         rt.dist = 0;
         rt.dir = 1;
       }
-      // stop detection
       for (const s of stops) {
-        if (Math.abs(rt.dist - s.d) < 0.9 && Math.abs(s.d - rt.lastStopD) > 3) {
+        if (Math.abs(rt.dist - s.d) < 2 && Math.abs(s.d - rt.lastStopD) > 6) {
           rt.dwell = 2.4;
           rt.lastStopD = s.d;
           rt.stationName = s.name;
@@ -110,8 +126,7 @@ function Vehicle({ line, path, stops, index, count, tram }: VehicleProps): React
       groupRef.current.position.set(pos.x, 0, pos.z);
       groupRef.current.rotation.y = Math.atan2(tangent.x, tangent.z);
     }
-    // carry the player if riding this vehicle
-    if (tram && player.onTram === rt) {
+    if (player.onTram === rt) {
       player.x = pos.x;
       player.z = pos.z;
     }
@@ -119,45 +134,84 @@ function Vehicle({ line, path, stops, index, count, tram }: VehicleProps): React
 
   return (
     <group ref={groupRef}>
-      <VehicleMesh color={line.color} length={tram ? 6.5 : 5} tram={tram} />
+      <TramMesh color={line.color} length={20} />
+    </group>
+  );
+}
+
+function Ferry({ path, index }: { path: Path; index: number }): React.JSX.Element {
+  const groupRef = useRef<THREE.Group>(null);
+  const dir = useRef<1 | -1>(index % 2 === 0 ? 1 : -1);
+  const dist = useRef((index / 3) * path.length);
+
+  useFrame((_, dtRaw) => {
+    const dt = Math.min(dtRaw, 0.05);
+    dist.current += dir.current * 6 * dt;
+    if (dist.current >= path.length) dir.current = -1;
+    if (dist.current <= 0) dir.current = 1;
+    const { pos, tangent } = samplePath(path, THREE.MathUtils.clamp(dist.current, 0, path.length));
+    if (groupRef.current) {
+      groupRef.current.position.set(pos.x, 0.4, pos.z);
+      groupRef.current.rotation.y = Math.atan2(tangent.x, tangent.z);
+    }
+  });
+
+  return (
+    <group ref={groupRef}>
+      <mesh position={[0, 0.6, 0]} castShadow>
+        <boxGeometry args={[6, 1.2, 18]} />
+        <meshStandardMaterial color="#f2f4f6" roughness={0.6} />
+      </mesh>
+      <mesh position={[0, 1.8, -2]} castShadow>
+        <boxGeometry args={[5, 1.6, 8]} />
+        <meshStandardMaterial color="#2f5a7a" roughness={0.5} />
+      </mesh>
+      <mesh position={[0, 0.9, 9.4]}>
+        <boxGeometry args={[5.6, 1.4, 1]} />
+        <meshStandardMaterial color="#c94f4f" />
+      </mesh>
     </group>
   );
 }
 
 const TRAMS_PER_LINE = 2;
-const BUSES_PER_LINE = 1;
 
 export function TramSystem(): React.JSX.Element {
-  const trams = useMemo<VehicleConfig[]>(
-    () =>
-      TRAM_LINES.map((line) => {
-        const path = buildPath(line.waypoints, 0.5);
-        const stops: StopDist[] = line.stops.map((sid) => {
-          const st = STATIONS[sid];
-          return { name: st.name, d: nearestOnPath(path, tx(st.cx), tz(st.cy)) };
-        });
-        return { line, path, stops };
-      }),
-    [],
-  );
+  const trams = useMemo<TramConfig[]>(() => {
+    const w = geo();
+    const out: TramConfig[] = [];
+    for (const route of w.tramRoutes) {
+      const clipped = longestInBounds(route.path, w.halfX, w.halfZ);
+      if (clipped.length < 2) continue;
+      const path = buildPathXZ(clipped, 0.6);
+      const stops: StopDist[] = [];
+      for (let d = 300; d < path.length - 60; d += 340) {
+        const { pos } = samplePath(path, d);
+        stops.push({ name: w.nearestHood(pos.x, pos.z), d });
+      }
+      out.push({ line: { id: route.ref, name: route.name, color: route.color }, path, stops });
+    }
+    return out;
+  }, []);
 
-  const buses = useMemo<VehicleConfig[]>(
-    () => BUS_LINES.map((line) => ({ line, path: buildPath(line.waypoints, 0.5), stops: [] })),
-    [],
-  );
+  const ferries = useMemo<Path[]>(() => {
+    const w = geo();
+    return w.ferryRoutes
+      .map((r) => longestInBounds(r, w.halfX, w.halfZ))
+      .filter((r) => r.length >= 2)
+      .map((r) => buildPathXZ(r, 0.4, 20));
+  }, []);
 
   return (
     <group>
       {trams.map(({ line, path, stops }) =>
         Array.from({ length: TRAMS_PER_LINE }, (_, i) => (
-          <Vehicle key={`t${line.id}-${i}`} line={line} path={path} stops={stops} index={i} count={TRAMS_PER_LINE} tram />
+          <Tram key={`t${line.id}-${i}`} line={line} path={path} stops={stops} index={i} count={TRAMS_PER_LINE} />
         )),
       )}
-      {buses.map(({ line, path, stops }) =>
-        Array.from({ length: BUSES_PER_LINE }, (_, i) => (
-          <Vehicle key={`b${line.id}-${i}`} line={line} path={path} stops={stops} index={i} count={BUSES_PER_LINE} tram={false} />
-        )),
-      )}
+      {ferries.map((path, i) => (
+        <Ferry key={`f${i}`} path={path} index={i} />
+      ))}
     </group>
   );
 }

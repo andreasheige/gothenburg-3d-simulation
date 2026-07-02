@@ -1,16 +1,25 @@
 import { useRef, useMemo, useLayoutEffect } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
-import { tx, tz } from '@/core/config/world';
+import { project } from '@/domain/geo/meta';
 
 const N = 34;
 const tmp = new THREE.Object3D();
 
-// Roosts near the river and central plazas.
-const ROOSTS: readonly [number, number][] = [
-  [tx(30), tz(10)], [tx(20), tz(10)], [tx(46), tz(10)], [tx(62), tz(10)],
-  [tx(18), tz(13)], [tx(30), tz(18)],
-];
+// Roosts along Göta älv and the central squares (real lon/lat).
+const ROOSTS: readonly [number, number][] = (
+  [
+    [11.965, 57.7095], // river by Nordstan
+    [11.958, 57.709], // river toward Järntorget
+    [11.973, 57.7105], // Lilla Bommen harbour
+    [11.9668, 57.7066], // Gustaf Adolfs Torg
+    [11.967, 57.7072], // Brunnsparken
+    [11.9557, 57.6996], // Feskekörka
+  ] as const
+).map(([lon, lat]): [number, number] => {
+  const { x, z } = project(lon, lat);
+  return [x, z];
+});
 
 interface Bird {
   x: number;

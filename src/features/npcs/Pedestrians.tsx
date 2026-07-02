@@ -1,11 +1,13 @@
 import { useRef, useMemo, useLayoutEffect } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
-import { tx, tz } from '@/core/config/world';
-import { blocked } from '@/core/systems/worldgen';
+import { project } from '@/domain/geo/meta';
+import { geo } from '@/core/systems/geoWorld';
 import { registry } from '@/core/systems/registry';
 
 const N = 46;
+const CENTER = project(11.967, 57.7072); // Brunnsparken
+const SPREAD = 520;
 const tmpBody = new THREE.Object3D();
 const tmpHead = new THREE.Object3D();
 const col = new THREE.Color();
@@ -33,19 +35,18 @@ export function Pedestrians(): React.JSX.Element {
   const headRef = useRef<THREE.InstancedMesh>(null);
 
   const peds = useMemo<Ped[]>(() => {
+    const w = geo();
     const arr: Ped[] = [];
     for (let i = 0; i < N; i++) {
-      // spawn on a walkable central-ish tile
+      // spawn on a walkable spot near the central hub
       let x: number;
       let z: number;
       let tries = 0;
       do {
-        const cx = 6 + Math.floor(Math.random() * 50);
-        const cy = 13 + Math.floor(Math.random() * 30);
-        x = tx(cx);
-        z = tz(cy);
+        x = CENTER.x + (Math.random() - 0.5) * 2 * SPREAD;
+        z = CENTER.z + (Math.random() - 0.5) * 2 * SPREAD;
         tries++;
-      } while (blocked(x, z, 0.6) && tries < 40);
+      } while (w.blocked(x, z, 0.6) && tries < 60);
       const tourist = i < 14;
       const p: Ped = {
         x,
@@ -86,16 +87,15 @@ export function Pedestrians(): React.JSX.Element {
   }, [peds]);
 
   function pickTarget(p: Ped): void {
-    const cx = 5 + Math.floor(Math.random() * 52);
-    const cy = 13 + Math.floor(Math.random() * 32);
-    p.tx = tx(cx);
-    p.tz = tz(cy);
+    p.tx = CENTER.x + (Math.random() - 0.5) * 2 * SPREAD;
+    p.tz = CENTER.z + (Math.random() - 0.5) * 2 * SPREAD;
   }
 
   useFrame((state, dtRaw) => {
     const body = bodyRef.current;
     const head = headRef.current;
     if (!body || !head) return;
+    const w = geo();
     const dt = Math.min(dtRaw, 0.05);
     for (let i = 0; i < peds.length; i++) {
       const p = peds[i]!;
@@ -111,9 +111,9 @@ export function Pedestrians(): React.JSX.Element {
         } else {
           const nx = p.x + (dx / d) * p.speed * dt;
           const nz = p.z + (dz / d) * p.speed * dt;
-          if (!blocked(nx, p.z, 0.5)) p.x = nx;
+          if (!w.blocked(nx, p.z, 0.5)) p.x = nx;
           else pickTarget(p);
-          if (!blocked(p.x, nz, 0.5)) p.z = nz;
+          if (!w.blocked(p.x, nz, 0.5)) p.z = nz;
           else pickTarget(p);
           p.angle = Math.atan2(dx, dz);
         }
