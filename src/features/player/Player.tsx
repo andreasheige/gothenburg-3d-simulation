@@ -61,6 +61,7 @@ export function Player(): React.JSX.Element {
     // follow camera: orbit yaw with Q / R
     if (input.isDown('q')) yaw.current -= dt * 1.6;
     if (input.isDown('r')) yaw.current += dt * 1.6;
+    player.camYaw = yaw.current;
 
     const height = riding ? 15 : 13;
     const dirx = -Math.sin(yaw.current);

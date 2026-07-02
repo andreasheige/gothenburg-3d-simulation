@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { ITEMS } from '@/core/config/items';
 import { project } from '@/domain/geo/meta';
+import { realDayT } from '@/core/systems/time';
 import { geo } from '@/core/systems/geoWorld';
 import { VENUES } from '@/domain/venues';
 import type {
@@ -51,6 +52,8 @@ export interface PlayerTransform {
   angle: number;
   vx: number;
   vz: number;
+  /** Camera orbit yaw (radians), published for the compass + minimap. */
+  camYaw: number;
   onTram: TramRuntime | null;
   spawn: { x: number; z: number };
 }
@@ -63,6 +66,7 @@ export const player: PlayerTransform = {
   angle: 0,
   vx: 0,
   vz: 0,
+  camYaw: 0.6,
   onTram: null,
   spawn: { x: SPAWN.x, z: SPAWN.z },
 };
@@ -118,7 +122,7 @@ export const useGame = create<GameState>()((set, get) => ({
   // --- world state ---
   scene: 'city',
   interiorId: null,
-  dayT: 11 / 24, // start mid-morning so the city is clearly visible on load
+  dayT: realDayT(), // synced to real Gothenburg (Europe/Stockholm) local time
   paused: false,
 
   // --- player economy ---

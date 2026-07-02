@@ -9,6 +9,7 @@ import { VenueDoors } from './components/VenueDoors';
 import { TramSystem } from '@/features/transit/TramSystem';
 import { Pedestrians } from '@/features/npcs/Pedestrians';
 import { Seagulls } from '@/features/npcs/Seagulls';
+import { Rain } from '@/features/weather/Rain';
 import { Player } from '@/features/player/Player';
 import { Systems } from '@/features/systems/Systems';
 
@@ -27,6 +28,7 @@ export function WorldScene(): React.JSX.Element {
       <TramSystem />
       <Pedestrians />
       <Seagulls />
+      <Rain />
       <Player />
       <Systems />
     </group>

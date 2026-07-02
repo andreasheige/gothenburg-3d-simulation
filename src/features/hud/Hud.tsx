@@ -1,4 +1,5 @@
 import { useGame } from '@/state/store';
+import { useWeather } from '@/state/weather';
 import { ITEMS } from '@/core/config/items';
 import { VENUES } from '@/domain/venues';
 import type { ItemId } from '@/core/types';
@@ -21,6 +22,10 @@ export function Hud(): React.JSX.Element {
   const scene = useGame((s) => s.scene);
   const riding = useGame((s) => s.riding);
   const interiorId = useGame((s) => s.interiorId);
+  const wIcon = useWeather((s) => s.icon);
+  const wLabel = useWeather((s) => s.label);
+  const wTemp = useWeather((s) => s.tempC);
+  const wOnline = useWeather((s) => s.online);
 
   const stars = Math.round(wanted);
   const venue = interiorId ? VENUES.find((v) => v.id === interiorId) : undefined;
@@ -42,6 +47,13 @@ export function Hud(): React.JSX.Element {
           <div className="row">
             <span className="lbl">Klocka</span>
             <span className="val">{clock(dayT)}</span>
+          </div>
+          <div className="row">
+            <span className="lbl">Väder</span>
+            <span className="val">
+              {wIcon} {wTemp}°C · {wLabel}
+              {!wOnline && <span className="clean"> (offline)</span>}
+            </span>
           </div>
           <div className="row">
             <span className="lbl">Plånbok</span>

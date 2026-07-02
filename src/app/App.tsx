@@ -3,6 +3,7 @@ import { Canvas } from '@react-three/fiber';
 import { useGame, resolveSpawn } from '@/state/store';
 import { input } from '@/core/systems/input';
 import { loadGeoWorld } from '@/core/systems/geoWorld';
+import { startWeather } from '@/state/weather';
 import { WorldScene } from '@/features/world/WorldScene';
 import { InteriorScene } from '@/features/interiors/InteriorScene';
 import { Hud } from '@/features/hud/Hud';
@@ -14,6 +15,7 @@ export function App(): React.JSX.Element {
 
   useEffect(() => {
     input.attach();
+    startWeather();
     let alive = true;
     void loadGeoWorld().then(() => {
       if (!alive) return;

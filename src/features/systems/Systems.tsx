@@ -2,7 +2,7 @@ import { useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { useGame, player } from '@/state/store';
 import { useKeyPress } from '@/shared/hooks/useKeyPress';
-import { DAY_LENGTH } from '@/core/config/world';
+import { realDayT } from '@/core/systems/time';
 import { geo } from '@/core/systems/geoWorld';
 import { VENUES, SHOPS } from '@/domain/venues';
 import { LANDMARKS } from '@/domain/landmarks';
@@ -93,7 +93,10 @@ export function Systems(): null {
   useFrame((_, dtRaw) => {
     const dt = Math.min(dtRaw, 0.05);
     const s = useGame.getState();
-    s.advanceTime(dt, DAY_LENGTH);
+    // Clock is synced to real Gothenburg time; only push to state on a minute
+    // change to avoid re-rendering the HUD every frame.
+    const rt = realDayT();
+    if (Math.floor(rt * 1440) !== Math.floor(s.dayT * 1440)) useGame.setState({ dayT: rt });
     s.decayWanted(dt);
     s.setDistrict(geo().nearestHood(player.x, player.z));
 
