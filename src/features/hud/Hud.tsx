@@ -2,6 +2,8 @@ import { useGame } from '@/state/store';
 import { useWeather } from '@/state/weather';
 import { ITEMS } from '@/core/config/items';
 import { VENUES } from '@/domain/venues';
+import { Minimap } from '@/features/hud/Minimap';
+import { Compass } from '@/features/hud/Compass';
 import type { ItemId } from '@/core/types';
 
 function clock(dayT: number): string {
@@ -22,6 +24,8 @@ export function Hud(): React.JSX.Element {
   const scene = useGame((s) => s.scene);
   const riding = useGame((s) => s.riding);
   const interiorId = useGame((s) => s.interiorId);
+  const street = useGame((s) => s.street);
+  const guide = useGame((s) => s.guide);
   const wIcon = useWeather((s) => s.icon);
   const wLabel = useWeather((s) => s.label);
   const wTemp = useWeather((s) => s.tempC);
@@ -44,6 +48,20 @@ export function Hud(): React.JSX.Element {
             <span className="lbl">Plats</span>
             <span className="val">{place}</span>
           </div>
+          {scene !== 'interior' && street && (
+            <div className="row">
+              <span className="lbl">Gata</span>
+              <span className="val">{street}</span>
+            </div>
+          )}
+          {scene !== 'interior' && guide && (
+            <div className="row">
+              <span className="lbl">Landmärke</span>
+              <span className="val">
+                {guide.name} · {guide.dist} m
+              </span>
+            </div>
+          )}
           <div className="row">
             <span className="lbl">Klocka</span>
             <span className="val">{clock(dayT)}</span>
@@ -119,12 +137,19 @@ export function Hud(): React.JSX.Element {
 
       <div className="scene-badge">{scene === 'interior' ? 'Inomhus' : 'Göteborg'}</div>
 
+      {scene !== 'interior' && (
+        <>
+          <Compass />
+          <Minimap />
+        </>
+      )}
+
       <div className="help">
         <div>
           <b>WASD</b> gå &nbsp; <b>Shift</b> spring &nbsp; <b>Q/R</b> rotera kamera
         </div>
         <div>
-          <b>E</b> interagera &nbsp; <b>F</b> släpp mat (måsar)
+          <b>E</b> interagera &nbsp; <b>F</b> släpp mat &nbsp; <b>M</b> karta
         </div>
       </div>
     </>

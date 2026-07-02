@@ -4,6 +4,7 @@ import { useGame, player } from '@/state/store';
 import { useKeyPress } from '@/shared/hooks/useKeyPress';
 import { realDayT } from '@/core/systems/time';
 import { geo } from '@/core/systems/geoWorld';
+import { nearestStreet, nearestLandmark } from '@/core/systems/navigation';
 import { VENUES, SHOPS } from '@/domain/venues';
 import { LANDMARKS } from '@/domain/landmarks';
 import { registry } from '@/core/systems/registry';
@@ -40,6 +41,10 @@ interface Best {
 
 export function Systems(): null {
   const last = useRef({ key: '' });
+  const navAcc = useRef(0);
+
+  useKeyPress('m', () => useGame.getState().toggleMap());
+  useKeyPress('escape', () => useGame.getState().closeMap());
 
   useKeyPress('e', () => {
     const s = useGame.getState();
@@ -99,6 +104,15 @@ export function Systems(): null {
     if (Math.floor(rt * 1440) !== Math.floor(s.dayT * 1440)) useGame.setState({ dayT: rt });
     s.decayWanted(dt);
     s.setDistrict(geo().nearestHood(player.x, player.z));
+
+    // orientation readouts (nearest street + landmark), a few times per second
+    navAcc.current += dt;
+    if (navAcc.current > 0.35) {
+      navAcc.current = 0;
+      const street = nearestStreet(player.x, player.z);
+      const nl = nearestLandmark(player.x, player.z);
+      s.setNav(street, nl ? { name: nl.name, dist: Math.round(nl.dist) } : null);
+    }
 
     // proximity: nearest interactable
     let best: Best | null = null;

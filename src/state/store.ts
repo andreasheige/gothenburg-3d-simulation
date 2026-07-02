@@ -92,9 +92,17 @@ export interface GameState {
   toasts: Toast[];
   riding: string | null;
 
+  // --- orientation ---
+  street: string;
+  guide: { name: string; dist: number } | null;
+  mapOpen: boolean;
+
   // --- actions ---
   advanceTime: (dt: number, dayLength: number) => void;
   setDistrict: (d: string) => void;
+  setNav: (street: string, guide: { name: string; dist: number } | null) => void;
+  toggleMap: () => void;
+  closeMap: () => void;
   setNearby: (n: Interaction | null) => void;
   setRiding: (id: string | null) => void;
   earn: (n: number) => void;
@@ -137,12 +145,29 @@ export const useGame = create<GameState>()((set, get) => ({
   toasts: [],
   riding: null,
 
+  // --- orientation ---
+  street: '',
+  guide: null,
+  mapOpen: false,
+
   // ---------- time ----------
   advanceTime: (dt, dayLength) => set((s) => ({ dayT: (s.dayT + dt / dayLength) % 1 })),
 
   setDistrict: (d) => {
     if (get().district !== d) set({ district: d });
   },
+  setNav: (street, guide) =>
+    set((s) => {
+      const patch: Partial<GameState> = {};
+      if (s.street !== street) patch.street = street;
+      const changed =
+        (s.guide?.name ?? '') !== (guide?.name ?? '') ||
+        Math.abs((s.guide?.dist ?? -1) - (guide?.dist ?? -1)) >= 2;
+      if (changed) patch.guide = guide;
+      return patch;
+    }),
+  toggleMap: () => set((s) => ({ mapOpen: !s.mapOpen })),
+  closeMap: () => set((s) => (s.mapOpen ? { mapOpen: false } : {})),
   setNearby: (n) => set({ nearby: n }),
   setRiding: (id) => set({ riding: id }),
 
