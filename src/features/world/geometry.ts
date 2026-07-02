@@ -98,15 +98,23 @@ const FACADES: [number, number, number][] = [
   [0.68, 0.62, 0.54],
 ];
 
-export function buildBuildingsGeometry(buildings: readonly GeoBuilding[]): THREE.BufferGeometry {
-  const pos: number[] = [];
-  const col: number[] = [];
-  const c = new THREE.Color();
+// Metres covered by one texture tile (an 8×8 window grid) horizontally and
+// vertically — controls apparent window size on the facades.
+const TILE_W = 24;
+const TILE_H = 26;
 
-  function push(x: number, y: number, z: number, r: number, g: number, b: number): void {
-    pos.push(x, y, z);
-    col.push(r, g, b);
-  }
+export interface BuildingGeometry {
+  readonly walls: THREE.BufferGeometry;
+  readonly roofs: THREE.BufferGeometry;
+}
+
+export function buildBuildingsGeometry(buildings: readonly GeoBuilding[]): BuildingGeometry {
+  const wpos: number[] = [];
+  const wcol: number[] = [];
+  const wuv: number[] = [];
+  const rpos: number[] = [];
+  const rcol: number[] = [];
+  const c = new THREE.Color();
 
   for (const bld of buildings) {
     let ring = openRing(bld.p);
@@ -124,34 +132,52 @@ export function buildBuildingsGeometry(buildings: readonly GeoBuilding[]): THREE
     const rg = c.g;
     const rb = c.b;
 
-    // roof
+    // roof (no window texture)
     const tris = triangulate(ring);
     for (const t of tris) {
       for (const idx of t) {
         const p = ring[idx]!;
-        push(p[0], h, p[1], rr * 1.08, rg * 1.08, rb * 1.08);
+        rpos.push(p[0], h, p[1]);
+        rcol.push(rr * 1.08, rg * 1.08, rb * 1.08);
       }
     }
-    // walls (slightly darker)
-    const wr = rr * 0.82;
-    const wg = rg * 0.82;
-    const wb = rb * 0.82;
+
+    // walls, tinted a touch lighter than roof so the window map reads well
+    const wr = rr * 0.96;
+    const wg = rg * 0.96;
+    const wb = rb * 0.96;
+    const vTop = h / TILE_H;
     for (let i = 0; i < ring.length; i++) {
       const a = ring[i]!;
       const b = ring[(i + 1) % ring.length]!;
+      const uEnd = Math.hypot(b[0] - a[0], b[1] - a[1]) / TILE_W;
       // outward for CCW ring: two triangles a0,b0,b1 and a0,b1,a1
-      push(a[0], 0, a[1], wr, wg, wb);
-      push(b[0], 0, b[1], wr, wg, wb);
-      push(b[0], h, b[1], wr, wg, wb);
-      push(a[0], 0, a[1], wr, wg, wb);
-      push(b[0], h, b[1], wr, wg, wb);
-      push(a[0], h, a[1], wr, wg, wb);
+      // corners: a0=(a,0) b0=(b,0) b1=(b,h) a1=(a,h)
+      pushWall(a[0], 0, a[1], 0, 0);
+      pushWall(b[0], 0, b[1], uEnd, 0);
+      pushWall(b[0], h, b[1], uEnd, vTop);
+      pushWall(a[0], 0, a[1], 0, 0);
+      pushWall(b[0], h, b[1], uEnd, vTop);
+      pushWall(a[0], h, a[1], 0, vTop);
+    }
+
+    function pushWall(x: number, y: number, z: number, u: number, v: number): void {
+      wpos.push(x, y, z);
+      wcol.push(wr, wg, wb);
+      wuv.push(u, v);
     }
   }
 
-  const g = new THREE.BufferGeometry();
-  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-  g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
-  g.computeVertexNormals();
-  return g;
+  const walls = new THREE.BufferGeometry();
+  walls.setAttribute('position', new THREE.Float32BufferAttribute(wpos, 3));
+  walls.setAttribute('color', new THREE.Float32BufferAttribute(wcol, 3));
+  walls.setAttribute('uv', new THREE.Float32BufferAttribute(wuv, 2));
+  walls.computeVertexNormals();
+
+  const roofs = new THREE.BufferGeometry();
+  roofs.setAttribute('position', new THREE.Float32BufferAttribute(rpos, 3));
+  roofs.setAttribute('color', new THREE.Float32BufferAttribute(rcol, 3));
+  roofs.computeVertexNormals();
+
+  return { walls, roofs };
 }
