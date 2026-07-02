@@ -87,7 +87,98 @@ export function buildRibbonGeometry(roads: readonly GeoRoad[], width: number, y:
   return g;
 }
 
-// --- extruded buildings --------------------------------------------------
+// --- dashed lane markings -----------------------------------------------
+
+// Centre-line dashes along each road polyline, spaced by arc length so dashes
+// stay evenly sized regardless of segment lengths.
+export function buildDashedGeometry(
+  roads: readonly GeoRoad[],
+  dashLen: number,
+  gapLen: number,
+  width: number,
+  y: number,
+): THREE.BufferGeometry {
+  const pos: number[] = [];
+  const hw = width / 2;
+  const period = dashLen + gapLen;
+  for (const road of roads) {
+    const p = road.p;
+    let acc = 0; // arc length from the road start
+    for (let i = 0; i < p.length - 1; i++) {
+      const a = p[i]!;
+      const b = p[i + 1]!;
+      const dx = b[0] - a[0];
+      const dz = b[1] - a[1];
+      const len = Math.hypot(dx, dz) || 1;
+      const ux = dx / len;
+      const uz = dz / len;
+      const nx = -uz * hw;
+      const nz = ux * hw;
+      let s = 0;
+      let guard = 0;
+      while (s < len && guard++ < 4000) {
+        const phase = (acc + s) % period;
+        if (phase < dashLen) {
+          const end = Math.min(len, s + (dashLen - phase));
+          const x0 = a[0] + ux * s;
+          const z0 = a[1] + uz * s;
+          const x1 = a[0] + ux * end;
+          const z1 = a[1] + uz * end;
+          pos.push(x0 + nx, y, z0 + nz, x0 - nx, y, z0 - nz, x1 - nx, y, z1 - nz);
+          pos.push(x0 + nx, y, z0 + nz, x1 - nx, y, z1 - nz, x1 + nx, y, z1 + nz);
+          s = end + 1e-4;
+        } else {
+          s += period - phase + 1e-4;
+        }
+      }
+      acc += len;
+    }
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.computeVertexNormals();
+  return g;
+}
+
+// --- twin tram rails -----------------------------------------------------
+
+// Two thin metal rails offset laterally from each track centreline by ±gauge/2.
+export function buildRailsGeometry(
+  tracks: readonly (readonly Pt[])[],
+  gauge: number,
+  width: number,
+  y: number,
+): THREE.BufferGeometry {
+  const pos: number[] = [];
+  const half = width / 2;
+  for (const p of tracks) {
+    for (let i = 0; i < p.length - 1; i++) {
+      const a = p[i]!;
+      const b = p[i + 1]!;
+      const dx = b[0] - a[0];
+      const dz = b[1] - a[1];
+      const len = Math.hypot(dx, dz) || 1;
+      const nx = -dz / len;
+      const nz = dx / len;
+      for (const off of [gauge / 2, -gauge / 2]) {
+        const ox = nx * off;
+        const oz = nz * off;
+        const ax = a[0] + ox;
+        const az = a[1] + oz;
+        const bx = b[0] + ox;
+        const bz = b[1] + oz;
+        const lx = nx * half;
+        const lz = nz * half;
+        pos.push(ax + lx, y, az + lz, ax - lx, y, az - lz, bx - lx, y, bz - lz);
+        pos.push(ax + lx, y, az + lz, bx - lx, y, bz - lz, bx + lx, y, bz + lz);
+      }
+    }
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.computeVertexNormals();
+  return g;
+}
 
 const FACADES: [number, number, number][] = [
   [0.72, 0.66, 0.55],
