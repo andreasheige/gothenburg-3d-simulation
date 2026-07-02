@@ -31,6 +31,9 @@ export function App(): React.JSX.Element {
         shadows
         dpr={[1, 1.75]}
         gl={{ antialias: true, powerPreference: 'high-performance' }}
+        onCreated={({ gl }) => {
+          gl.toneMappingExposure = 1.25;
+        }}
         camera={{ fov: 55, near: 0.5, far: 3200, position: [60, 40, 120] }}
       >
         <color attach="background" args={['#0a0f14']} />

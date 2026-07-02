@@ -118,7 +118,7 @@ export const useGame = create<GameState>()((set, get) => ({
   // --- world state ---
   scene: 'city',
   interiorId: null,
-  dayT: 20 / 24, // start at 20:00 for nightlife vibes
+  dayT: 11 / 24, // start mid-morning so the city is clearly visible on load
   paused: false,
 
   // --- player economy ---

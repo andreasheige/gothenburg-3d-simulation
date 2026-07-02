@@ -62,10 +62,10 @@ export function Player(): React.JSX.Element {
     if (input.isDown('q')) yaw.current -= dt * 1.6;
     if (input.isDown('r')) yaw.current += dt * 1.6;
 
-    const height = riding ? 15 : 11;
+    const height = riding ? 15 : 13;
     const dirx = -Math.sin(yaw.current);
     const dirz = -Math.cos(yaw.current);
-    let dist = riding ? 22 : 15;
+    let dist = riding ? 22 : 17;
     // camera collision: pull the camera in if it would clip a building
     for (let s = 1; s <= 10; s++) {
       const t = dist * (s / 10);

@@ -34,7 +34,7 @@ export function Roads(): React.JSX.Element {
         <meshStandardMaterial color={COLORS.road} roughness={0.95} />
       </mesh>
       <mesh geometry={minor} receiveShadow>
-        <meshStandardMaterial color="#42474d" roughness={0.96} />
+        <meshStandardMaterial color="#464b52" roughness={0.96} />
       </mesh>
       <mesh geometry={foot} receiveShadow>
         <meshStandardMaterial color={COLORS.pavement} roughness={1} />
