@@ -7,6 +7,8 @@ import { buildPathXZ, samplePath } from '@/core/math/path';
 import type { Path } from '@/core/math/path';
 import { registry } from '@/core/systems/registry';
 import { player } from '@/state/store';
+import { realDayT } from '@/core/systems/time';
+import { tramCountFor, isWeekendNow } from '@/domain/transit/schedule';
 import type { TramRuntime } from '@/core/types';
 
 interface StopDist {
@@ -24,6 +26,7 @@ interface TramConfig {
   line: LineRef;
   path: Path;
   stops: readonly StopDist[];
+  count: number;
 }
 
 // Longest contiguous run of a route polyline that stays inside the world box, so
@@ -174,11 +177,12 @@ function Ferry({ path, index }: { path: Path; index: number }): React.JSX.Elemen
   );
 }
 
-const TRAMS_PER_LINE = 3;
-
 export function TramSystem(): React.JSX.Element {
   const trams = useMemo<TramConfig[]>(() => {
     const w = geo();
+    const dt = realDayT();
+    const hour = dt * 24;
+    const weekend = isWeekendNow();
     const out: TramConfig[] = [];
     for (const route of w.tramRoutes) {
       const clipped = longestInBounds(route.path, w.halfX, w.halfZ);
@@ -189,7 +193,9 @@ export function TramSystem(): React.JSX.Element {
         const { pos } = samplePath(path, d);
         stops.push({ name: w.nearestHood(pos.x, pos.z), d });
       }
-      out.push({ line: { id: route.ref, name: route.name, color: route.color }, path, stops });
+      // Fleet size follows the synthetic timetable for the current hour.
+      const count = tramCountFor(route.ref, hour, weekend);
+      out.push({ line: { id: route.ref, name: route.name, color: route.color }, path, stops, count });
     }
     return out;
   }, []);
@@ -204,9 +210,9 @@ export function TramSystem(): React.JSX.Element {
 
   return (
     <group>
-      {trams.map(({ line, path, stops }) =>
-        Array.from({ length: TRAMS_PER_LINE }, (_, i) => (
-          <Tram key={`t${line.id}-${i}`} line={line} path={path} stops={stops} index={i} count={TRAMS_PER_LINE} />
+      {trams.map(({ line, path, stops, count }) =>
+        Array.from({ length: count }, (_, i) => (
+          <Tram key={`t${line.id}-${i}`} line={line} path={path} stops={stops} index={i} count={count} />
         )),
       )}
       {ferries.map((path, i) => (

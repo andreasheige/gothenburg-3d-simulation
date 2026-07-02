@@ -5,6 +5,7 @@ import { useKeyPress } from '@/shared/hooks/useKeyPress';
 import { realDayT } from '@/core/systems/time';
 import { geo } from '@/core/systems/geoWorld';
 import { nearestStreet, nearestLandmark } from '@/core/systems/navigation';
+import { currentService } from '@/domain/transit/schedule';
 import { VENUES, SHOPS } from '@/domain/venues';
 import { LANDMARKS } from '@/domain/landmarks';
 import { registry } from '@/core/systems/registry';
@@ -136,7 +137,12 @@ export function Systems(): null {
         if (!rt.doorsOpen) continue;
         const d = Math.hypot(player.x - rt.pos.x, player.z - rt.pos.z);
         if (d < 4.5 && d < bestD) {
-          best = { kind: 'tram', ref: rt, label: `Åk ${rt.line.name} (${rt.stationName})` };
+          const svc = currentService(rt.line.id);
+          best = {
+            kind: 'tram',
+            ref: rt,
+            label: `Åk ${rt.line.name} (${rt.stationName}) · avgång var ${svc.headwayMin} min`,
+          };
           bestD = d;
         }
       }

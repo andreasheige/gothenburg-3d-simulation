@@ -22,3 +22,23 @@ export function realDayT(now: Date = new Date()): number {
   }
   return (h * 3600 + m * 60 + s) / 86400;
 }
+
+const dayFmt = new Intl.DateTimeFormat('en-US', {
+  timeZone: 'Europe/Stockholm',
+  weekday: 'short',
+});
+
+const DAY_INDEX: Record<string, number> = {
+  Sun: 0,
+  Mon: 1,
+  Tue: 2,
+  Wed: 3,
+  Thu: 4,
+  Fri: 5,
+  Sat: 6,
+};
+
+/** Stockholm weekday, 0 = Sunday … 6 = Saturday. */
+export function realWeekday(now: Date = new Date()): number {
+  return DAY_INDEX[dayFmt.format(now)] ?? now.getDay();
+}

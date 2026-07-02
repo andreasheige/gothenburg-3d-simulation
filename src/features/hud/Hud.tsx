@@ -4,6 +4,7 @@ import { ITEMS } from '@/core/config/items';
 import { VENUES } from '@/domain/venues';
 import { Minimap } from '@/features/hud/Minimap';
 import { Compass } from '@/features/hud/Compass';
+import { currentService } from '@/domain/transit/schedule';
 import type { ItemId } from '@/core/types';
 
 function clock(dayT: number): string {
@@ -34,6 +35,7 @@ export function Hud(): React.JSX.Element {
   const stars = Math.round(wanted);
   const venue = interiorId ? VENUES.find((v) => v.id === interiorId) : undefined;
   const place = scene === 'interior' && venue ? venue.name : district;
+  const trafik = currentService('3');
 
   const invSlots = (Object.entries(inventory) as [ItemId, number | undefined][]).filter(
     ([, n]) => (n ?? 0) > 0,
@@ -71,6 +73,12 @@ export function Hud(): React.JSX.Element {
             <span className="val">
               {wIcon} {wTemp}°C · {wLabel}
               {!wOnline && <span className="clean"> (offline)</span>}
+            </span>
+          </div>
+          <div className="row">
+            <span className="lbl">Trafik</span>
+            <span className="val">
+              🚋 {trafik.band} · var {trafik.headwayMin} min
             </span>
           </div>
           <div className="row">
