@@ -30,5 +30,9 @@ export default tseslint.config(
     files: ['vite.config.ts', 'eslint.config.js'],
     languageOptions: { globals: { ...globals.node } },
   },
+  {
+    files: ['scripts/**/*.{js,mjs}'],
+    languageOptions: { globals: { ...globals.node } },
+  },
   prettier,
 );

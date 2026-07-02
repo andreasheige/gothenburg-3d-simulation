@@ -1,8 +1,8 @@
 import { create } from 'zustand';
 import { ITEMS } from '@/core/config/items';
-import { tx, tz } from '@/core/config/world';
+import { project } from '@/domain/geo/meta';
+import { geo } from '@/core/systems/geoWorld';
 import { VENUES } from '@/domain/venues';
-import { blocked } from '@/core/systems/worldgen';
 import type {
   Interaction,
   ItemId,
@@ -15,23 +15,34 @@ import type {
   Venue,
 } from '@/core/types';
 
-// Find the nearest walkable spot to a target tile (spiral search) so the player
-// never spawns inside a building.
-function findSpawn(cx0: number, cy0: number): { x: number; z: number } {
-  for (let r = 0; r < 24; r++) {
+// Initial spawn: Brunnsparken, the central transit hub. Refined against real
+// building collision once the OSM world has loaded (see resolveSpawn).
+const SPAWN = project(11.967, 57.7072);
+
+/**
+ * Snap the spawn to the nearest walkable spot (spiral search in metres) so the
+ * player never starts inside a building footprint. Call after the geo world loads.
+ */
+export function resolveSpawn(): void {
+  const w = geo();
+  const step = 4;
+  for (let r = 0; r < 80; r++) {
     for (let dy = -r; dy <= r; dy++) {
       for (let dx = -r; dx <= r; dx++) {
         if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
-        const x = tx(cx0 + dx);
-        const z = tz(cy0 + dy);
-        if (!blocked(x, z, 0.9)) return { x, z };
+        const x = SPAWN.x + dx * step;
+        const z = SPAWN.z + dy * step;
+        if (!w.blocked(x, z, 1.2)) {
+          player.x = x;
+          player.z = z;
+          player.spawn.x = x;
+          player.spawn.z = z;
+          return;
+        }
       }
     }
   }
-  return { x: tx(cx0), z: tz(cy0) };
 }
-
-const SPAWN = findSpawn(28, 18); // open plaza by Brunnsparken
 
 /** Live player transform mutated every frame, read by systems (kept out of React state). */
 export interface PlayerTransform {
@@ -182,8 +193,8 @@ export const useGame = create<GameState>()((set, get) => ({
     set({ scene: 'city', interiorId: null });
     if (v) {
       // Place the player just outside the door.
-      player.x = tx(v.cx);
-      player.z = tz(v.cy) + 3;
+      player.x = v.x;
+      player.z = v.z + 3;
     }
   },
 

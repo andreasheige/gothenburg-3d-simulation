@@ -2,8 +2,8 @@ import { useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { useGame, player } from '@/state/store';
 import { useKeyPress } from '@/shared/hooks/useKeyPress';
-import { tx, tz, TILE, DAY_LENGTH } from '@/core/config/world';
-import { DISTRICTS } from '@/domain/districts';
+import { DAY_LENGTH } from '@/core/config/world';
+import { geo } from '@/core/systems/geoWorld';
 import { VENUES, SHOPS } from '@/domain/venues';
 import { LANDMARKS } from '@/domain/landmarks';
 import { registry } from '@/core/systems/registry';
@@ -18,34 +18,24 @@ interface Candidate {
   label: string;
 }
 
-// Precompute static interaction candidates (world positions).
+// Precompute static interaction candidates (world positions in metres).
 const STATIC: Candidate[] = [
-  ...VENUES.map((v): Candidate => ({ kind: 'venue', ref: v, x: tx(v.cx), z: tz(v.cy), reach: 3.6, label: `Gå in på ${v.name}` })),
+  ...VENUES.map((v): Candidate => ({ kind: 'venue', ref: v, x: v.x, z: v.z, reach: 5, label: `Gå in på ${v.name}` })),
   ...SHOPS.map((s): Candidate => ({
     kind: 'shop',
     ref: s,
-    x: tx(s.cx),
-    z: tz(s.cy),
-    reach: 3.2,
+    x: s.x,
+    z: s.z,
+    reach: 4.5,
     label: s.buysLoot ? `Sälj loot — ${s.name}` : `Handla — ${s.name}`,
   })),
-  ...LANDMARKS.map((l): Candidate => ({ kind: 'landmark', ref: l, x: tx(l.cx), z: tz(l.cy), reach: 6, label: `Ta ett foto — ${l.name}` })),
+  ...LANDMARKS.map((l): Candidate => ({ kind: 'landmark', ref: l, x: l.x, z: l.z, reach: 12, label: `Ta ett foto — ${l.name}` })),
 ];
 
 interface Best {
   kind: InteractionKind;
   ref: unknown;
   label: string;
-}
-
-function districtName(x: number, z: number): string {
-  const cx = Math.floor(x / TILE);
-  const cy = Math.floor(z / TILE);
-  for (const d of DISTRICTS) {
-    const [x0, y0, x1, y1] = d.rect;
-    if (cx >= x0 && cx < x1 && cy >= y0 && cy < y1) return d.name;
-  }
-  return 'Göteborg';
 }
 
 export function Systems(): null {
@@ -105,7 +95,7 @@ export function Systems(): null {
     const s = useGame.getState();
     s.advanceTime(dt, DAY_LENGTH);
     s.decayWanted(dt);
-    s.setDistrict(districtName(player.x, player.z));
+    s.setDistrict(geo().nearestHood(player.x, player.z));
 
     // proximity: nearest interactable
     let best: Best | null = null;

@@ -3,7 +3,7 @@ import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { player } from '@/state/store';
 import { input } from '@/core/systems/input';
-import { blocked, hitsBuilding } from '@/core/systems/worldgen';
+import { geo } from '@/core/systems/geoWorld';
 import { Character } from '@/shared/three/Character';
 
 const camTarget = new THREE.Vector3();
@@ -20,6 +20,7 @@ export function Player(): React.JSX.Element {
 
   useFrame((_, dtRaw) => {
     const dt = Math.min(dtRaw, 0.05);
+    const w = geo();
     const riding = !!player.onTram;
 
     if (!riding) {
@@ -34,11 +35,11 @@ export function Player(): React.JSX.Element {
         const len = Math.hypot(dx, dz) || 1;
         dx /= len;
         dz /= len;
-        const speed = input.isDown('shift') ? 11 : 6.5;
+        const speed = input.isDown('shift') ? 12 : 7;
         const nx = player.x + dx * speed * dt;
         const nz = player.z + dz * speed * dt;
-        if (!blocked(nx, player.z, 0.7)) player.x = nx;
-        if (!blocked(player.x, nz, 0.7)) player.z = nz;
+        if (!w.blocked(nx, player.z, 0.7)) player.x = nx;
+        if (!w.blocked(player.x, nz, 0.7)) player.z = nz;
         player.angle = Math.atan2(dx, dz);
         walkPhase.current += dt * speed * 1.4;
       }
@@ -68,7 +69,7 @@ export function Player(): React.JSX.Element {
     // camera collision: pull the camera in if it would clip a building
     for (let s = 1; s <= 10; s++) {
       const t = dist * (s / 10);
-      if (hitsBuilding(player.x + dirx * t, player.z + dirz * t, 1.0)) {
+      if (w.blocked(player.x + dirx * t, player.z + dirz * t, 1.0)) {
         dist = Math.max(5, dist * ((s - 1) / 10));
         break;
       }
