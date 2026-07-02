@@ -1,7 +1,6 @@
 import { useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
-import { tx, tz } from '@/core/config/world';
 import { VENUES, SHOPS } from '@/domain/venues';
 import { useGame } from '@/state/store';
 import { BillboardLabel } from '@/shared/three/BillboardLabel';
@@ -24,11 +23,11 @@ function Venue({ v }: { v: VenueData }): React.JSX.Element {
       const h = (useGame.getState().dayT * 24) % 24;
       const night = h >= 18 || h < 6;
       const base = night ? 2.2 : 0.2;
-      glowRef.current.intensity = base + (night ? Math.sin(state.clock.elapsedTime * 4 + v.cx) * 0.5 : 0);
+      glowRef.current.intensity = base + (night ? Math.sin(state.clock.elapsedTime * 4 + v.x) * 0.5 : 0);
     }
   });
   return (
-    <group position={[tx(v.cx), 0, tz(v.cy)]}>
+    <group position={[v.x, 0, v.z]}>
       {/* facade */}
       <mesh position={[0, 2.4, -0.9]} castShadow>
         <boxGeometry args={[3.6, 4.8, 1.4]} />
@@ -55,7 +54,7 @@ function Venue({ v }: { v: VenueData }): React.JSX.Element {
 function Shop({ s }: { s: ShopData }): React.JSX.Element {
   const color = SHOP_COLOR[s.kind];
   return (
-    <group position={[tx(s.cx), 0, tz(s.cy)]}>
+    <group position={[s.x, 0, s.z]}>
       <mesh position={[0, 1.4, -0.6]} castShadow>
         <boxGeometry args={[2.6, 2.8, 1]} />
         <meshStandardMaterial color="#4a4038" roughness={0.9} />

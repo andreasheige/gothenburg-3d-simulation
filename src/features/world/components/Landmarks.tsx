@@ -1,7 +1,6 @@
 import { useRef, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
-import { tx, tz } from '@/core/config/world';
 import { LANDMARKS } from '@/domain/landmarks';
 import { BillboardLabel } from '@/shared/three/BillboardLabel';
 import type { LandmarkType } from '@/core/types';
@@ -241,7 +240,7 @@ export function Landmarks(): React.JSX.Element {
         const B = BUILDERS[lm.type];
         const labelY = lm.type === 'tower' ? 38 : lm.type === 'ferris' ? 20 : 11;
         return (
-          <group key={lm.id} position={[tx(lm.cx), 0, tz(lm.cy)]}>
+          <group key={lm.id} position={[lm.x, 0, lm.z]}>
             <B />
             <BillboardLabel position={[0, labelY, 0]} fontSize={1.3} outlineWidth={0.08}>
               {lm.name}
