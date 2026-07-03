@@ -10,6 +10,7 @@ import { realDayT } from '@/core/systems/time';
 import { tramCountFor, isWeekendNow } from '@/domain/transit/schedule';
 import { longestInBounds, buildStopDists } from '@/domain/transit/stops';
 import type { StopDist } from '@/domain/transit/stops';
+import { hiddenHeight, HORIZON_GAME } from '@/core/systems/horizon';
 import { Character } from '@/shared/three/Character';
 import type { TramRuntime } from '@/core/types';
 
@@ -203,16 +204,31 @@ function Ferry({ path, index }: { path: Path; index: number }): React.JSX.Elemen
   const dir = useRef<1 | -1>(index % 2 === 0 ? 1 : -1);
   const dist = useRef((index / 3) * path.length);
 
+  // Waterline the hull sits on, the ship's tallest point (cabin top), and the
+  // pedestrian eye height used for the line-of-sight horizon.
+  const BASE_Y = 0.4;
+  const SHIP_TOP = 2.8;
+  const EYE = 2.4;
+
   useFrame((_, dtRaw) => {
     const dt = Math.min(dtRaw, 0.05);
     dist.current += dir.current * 6 * dt;
     if (dist.current >= path.length) dir.current = -1;
     if (dist.current <= 0) dir.current = 1;
     const { pos, tangent } = samplePath(path, THREE.MathUtils.clamp(dist.current, 0, path.length));
-    if (groupRef.current) {
-      groupRef.current.position.set(pos.x, 0.4, pos.z);
-      groupRef.current.rotation.y = Math.atan2(tangent.x, tangent.z);
-    }
+    const g = groupRef.current;
+    if (!g) return;
+    // Geometric-horizon dipping: sink the hull below the (stylised) curve of the
+    // Earth by how much of it the horizon hides at the player's viewing distance,
+    // so far ships rise hull-first from the river. The opaque water plane occludes
+    // the submerged part for free. HORIZON_GAME compresses the ~6 km real horizon
+    // to a few hundred metres so the effect is visible on this small map.
+    const range = Math.hypot(pos.x - player.x, pos.z - player.z);
+    const dip = hiddenHeight(range, EYE, true, HORIZON_GAME);
+    g.position.set(pos.x, BASE_Y - dip, pos.z);
+    g.rotation.y = Math.atan2(tangent.x, tangent.z);
+    // Fully below the horizon → cull the draw entirely.
+    g.visible = dip < SHIP_TOP;
   });
 
   return (
