@@ -114,7 +114,7 @@ export function Seagulls(): React.JSX.Element {
 
       tmp.position.set(b.x, b.y, b.z);
       tmp.rotation.set(0, Math.atan2(b.vx, b.vz), Math.sin(performance.now() * 0.02 + i) * 0.4);
-      tmp.scale.setScalar(1);
+      tmp.scale.set(0.7, 0.4, 0.7);
       tmp.updateMatrix();
       mesh.setMatrixAt(i, tmp.matrix);
     }
@@ -123,9 +123,9 @@ export function Seagulls(): React.JSX.Element {
 
   return (
     <instancedMesh ref={ref} args={[undefined, undefined, N]} frustumCulled={false}>
-      {/* simple gull: a flattened diamond */}
-      <coneGeometry args={[0.5, 1.4, 4]} />
-      <meshStandardMaterial color="#e8ecef" />
+      {/* simple gull: a small flattened dart */}
+      <coneGeometry args={[0.4, 1.1, 4]} />
+      <meshStandardMaterial color="#dfe4e8" />
     </instancedMesh>
   );
 }
