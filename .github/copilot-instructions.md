@@ -4,6 +4,11 @@ A browser 3D Gothenburg sandbox built with **React 19 + React Three Fiber (R3F) 
 written in **super-strict TypeScript** type-checked by **`tsgo`** (the TypeScript 7 native compiler).
 Follow the architecture and conventions below for every change.
 
+> 📚 **A deeper, maintained wiki lives in [`openwiki/`](../openwiki/README.md)** —
+> consult it for architecture, the geo pipeline, state/systems, transit, rendering
+> and directory layout before non-trivial changes. This file remains canonical for
+> repo rules.
+
 ## Stack
 
 - **React 19** + **@react-three/fiber v9** + **@react-three/drei v10** + **three 0.185**.
@@ -14,14 +19,14 @@ Follow the architecture and conventions below for every change.
 
 ## Commands (verified)
 
-| Task | Command |
-| --- | --- |
-| Dev server (port 8100) | `npm run dev` |
-| Type check (the gate) | `npm run typecheck` → `tsgo --noEmit` on app + node tsconfigs |
-| Lint | `npm run lint` (`eslint .`) / `npm run lint:fix` |
-| Format | `npm run format` / `npm run format:check` (Prettier) |
-| Production build | `npm run build` |
-| **Full gate before commit** | `npm run check` (typecheck → lint → build) |
+| Task                        | Command                                                       |
+| --------------------------- | ------------------------------------------------------------- |
+| Dev server (port 8100)      | `npm run dev`                                                 |
+| Type check (the gate)       | `npm run typecheck` → `tsgo --noEmit` on app + node tsconfigs |
+| Lint                        | `npm run lint` (`eslint .`) / `npm run lint:fix`              |
+| Format                      | `npm run format` / `npm run format:check` (Prettier)          |
+| Production build            | `npm run build`                                               |
+| **Full gate before commit** | `npm run check` (typecheck → lint → build)                    |
 
 `npm run check` **must pass with zero errors and zero warnings** before any commit.
 
