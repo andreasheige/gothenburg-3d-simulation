@@ -27,19 +27,37 @@ export function Player(): React.JSX.Element {
   const pitch = useRef(0.62); // camera elevation angle
   const dist = useRef(17); // camera distance (zoom)
   const wasRiding = useRef(false); // detect board/exit transitions
+  const marker = useRef<THREE.Mesh>(null); // walk-to destination ring
+  const pulse = useRef(0);
 
-  // Mouse-drag orbit + wheel zoom, bound to the WebGL canvas.
+  // Mouse-drag orbit + wheel zoom, bound to the WebGL canvas. A left click/tap
+  // that doesn't drag (below CLICK_PX of motion) instead raycasts to the ground
+  // and sets a walk-to destination (see the movement loop below).
   useEffect(() => {
     const el = gl.domElement;
     let dragging = false;
     let px = 0;
     let py = 0;
+    let downX = 0;
+    let downY = 0;
+    let downBtn = 0;
+    let moved = 0;
+
+    const CLICK_PX = 6;
+    const raycaster = new THREE.Raycaster();
+    const ndc = new THREE.Vector2();
+    const ground = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+    const hit = new THREE.Vector3();
 
     const onDown = (e: PointerEvent): void => {
       if (e.button !== 0 && e.button !== 2) return;
       dragging = true;
       px = e.clientX;
       py = e.clientY;
+      downX = e.clientX;
+      downY = e.clientY;
+      downBtn = e.button;
+      moved = 0;
       el.setPointerCapture(e.pointerId);
       el.style.cursor = 'grabbing';
     };
@@ -49,6 +67,7 @@ export function Player(): React.JSX.Element {
       const dy = e.clientY - py;
       px = e.clientX;
       py = e.clientY;
+      moved += Math.abs(dx) + Math.abs(dy);
       yaw.current -= dx * 0.005;
       pitch.current = Math.max(PITCH_MIN, Math.min(PITCH_MAX, pitch.current - dy * 0.004));
     };
@@ -56,6 +75,17 @@ export function Player(): React.JSX.Element {
       dragging = false;
       if (el.hasPointerCapture(e.pointerId)) el.releasePointerCapture(e.pointerId);
       el.style.cursor = 'grab';
+      // A left click/tap that barely moved = walk-to command, not a camera orbit.
+      const travel = Math.abs(e.clientX - downX) + Math.abs(e.clientY - downY);
+      if (downBtn === 0 && moved < CLICK_PX && travel < CLICK_PX && !player.onTram) {
+        const rect = el.getBoundingClientRect();
+        ndc.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+        ndc.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+        raycaster.setFromCamera(ndc, camera);
+        if (raycaster.ray.intersectPlane(ground, hit)) {
+          player.moveTarget = { x: hit.x, z: hit.z };
+        }
+      }
     };
     const onWheel = (e: WheelEvent): void => {
       e.preventDefault();
@@ -76,7 +106,7 @@ export function Player(): React.JSX.Element {
       el.removeEventListener('wheel', onWheel);
       el.removeEventListener('contextmenu', onCtx);
     };
-  }, [gl]);
+  }, [gl, camera]);
 
   useFrame((_, dtRaw) => {
     const dt = Math.min(dtRaw, 0.05);
@@ -101,6 +131,7 @@ export function Player(): React.JSX.Element {
       // camera-relative movement
       const moving = ax.x !== 0 || ax.z !== 0;
       if (moving) {
+        player.moveTarget = null; // manual input cancels a walk-to destination
         const sin = Math.sin(yaw.current);
         const cos = Math.cos(yaw.current);
         let dx = ax.x * cos - ax.z * sin;
@@ -115,10 +146,40 @@ export function Player(): React.JSX.Element {
         if (!w.blocked(player.x, nz, 0.7)) player.z = nz;
         player.angle = Math.atan2(dx, dz);
         walkPhase.current += dt * speed * 1.4;
+      } else if (player.moveTarget) {
+        // click / tap-to-move: walk straight toward the destination, collision
+        // aware. Stop when we arrive or if a wall blocks both axes.
+        const tx = player.moveTarget.x;
+        const tz = player.moveTarget.z;
+        const gx = tx - player.x;
+        const gz = tz - player.z;
+        const gd = Math.hypot(gx, gz);
+        if (gd < 1.1) {
+          player.moveTarget = null;
+        } else {
+          const dx = gx / gd;
+          const dz = gz / gd;
+          const speed = 8;
+          const nx = player.x + dx * speed * dt;
+          const nz = player.z + dz * speed * dt;
+          let stepped = false;
+          if (!w.blocked(nx, player.z, 0.7)) {
+            player.x = nx;
+            stepped = true;
+          }
+          if (!w.blocked(player.x, nz, 0.7)) {
+            player.z = nz;
+            stepped = true;
+          }
+          player.angle = Math.atan2(dx, dz);
+          walkPhase.current += dt * speed * 1.4;
+          if (!stepped) player.moveTarget = null; // stuck against geometry
+        }
       }
     } else {
       // face along ride; legs still. Keep the camera looking down the aisle by
       // tracking the tram heading, so turns don't leave us staring at a wall.
+      player.moveTarget = null;
       walkPhase.current = 0;
       if (player.onTram) yaw.current = player.onTram.angle + 0.6;
     }
@@ -138,6 +199,19 @@ export function Player(): React.JSX.Element {
       if (legL.current) legL.current.rotation.x = swing;
       if (legR.current) legR.current.rotation.x = -swing;
       group.current.visible = !riding;
+    }
+
+    // walk-to destination marker: a pulsing ring on the ground at the target.
+    if (marker.current) {
+      const tgt = player.moveTarget;
+      const show = !!tgt && !riding;
+      marker.current.visible = show;
+      if (tgt) {
+        pulse.current += dt * 4;
+        const s = 1 + Math.sin(pulse.current) * 0.18;
+        marker.current.position.set(tgt.x, 0.06, tgt.z);
+        marker.current.scale.set(s, s, 1);
+      }
     }
 
     // spherical follow camera (yaw + pitch + zoom)
@@ -162,5 +236,13 @@ export function Player(): React.JSX.Element {
     camera.lookAt(camTarget);
   });
 
-  return <Character groupRef={group} legLRef={legL} legRRef={legR} />;
+  return (
+    <>
+      <Character groupRef={group} legLRef={legL} legRRef={legR} />
+      <mesh ref={marker} rotation={[-Math.PI / 2, 0, 0]} visible={false}>
+        <ringGeometry args={[0.9, 1.3, 32]} />
+        <meshBasicMaterial color="#ffd500" transparent opacity={0.85} depthWrite={false} />
+      </mesh>
+    </>
+  );
 }

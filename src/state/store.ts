@@ -56,6 +56,8 @@ export interface PlayerTransform {
   camYaw: number;
   onTram: TramRuntime | null;
   spawn: { x: number; z: number };
+  /** Click/tap-to-move destination in world metres, or null when unset. */
+  moveTarget: { x: number; z: number } | null;
 }
 
 // Non-reactive shared player transform. Kept out of the reactive store to avoid
@@ -69,6 +71,7 @@ export const player: PlayerTransform = {
   camYaw: 0.6,
   onTram: null,
   spawn: { x: SPAWN.x, z: SPAWN.z },
+  moveTarget: null,
 };
 
 let toastId = 0;
@@ -212,6 +215,7 @@ export const useGame = create<GameState>()((set, get) => ({
     }
     player.x = tx;
     player.z = tz;
+    player.moveTarget = null;
     set((s) => (s.travelOpen ? { travelOpen: false } : {}));
     get().toast(`🌀 Reste till ${name}.`, 'good');
   },
