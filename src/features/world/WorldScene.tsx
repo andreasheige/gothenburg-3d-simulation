@@ -4,6 +4,7 @@ import { Water } from './components/Water';
 import { Roads } from './components/Roads';
 import { Buildings } from './components/Buildings';
 import { Landmarks } from './components/Landmarks';
+import { StreetFurniture } from './components/StreetFurniture';
 import { StreetLabels } from './components/StreetLabels';
 import { VenueDoors } from './components/VenueDoors';
 import { TramSystem } from '@/features/transit/TramSystem';
@@ -23,6 +24,7 @@ export function WorldScene(): React.JSX.Element {
       <Roads />
       <Buildings />
       <Landmarks />
+      <StreetFurniture />
       <StreetLabels />
       <VenueDoors />
       <TramSystem />
