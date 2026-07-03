@@ -97,6 +97,7 @@ export interface GameState {
   guide: { name: string; dist: number } | null;
   mapOpen: boolean;
   travelOpen: boolean;
+  debug: boolean;
 
   // --- actions ---
   advanceTime: (dt: number, dayLength: number) => void;
@@ -106,6 +107,7 @@ export interface GameState {
   closeMap: () => void;
   toggleTravel: () => void;
   closeTravel: () => void;
+  toggleDebug: () => void;
   teleport: (x: number, z: number, name: string) => void;
   setNearby: (n: Interaction | null) => void;
   setRiding: (id: string | null) => void;
@@ -157,6 +159,7 @@ export const useGame = create<GameState>()((set, get) => ({
   guide: null,
   mapOpen: false,
   travelOpen: false,
+  debug: false,
 
   // ---------- time ----------
   advanceTime: (dt, dayLength) => set((s) => ({ dayT: (s.dayT + dt / dayLength) % 1 })),
@@ -179,6 +182,11 @@ export const useGame = create<GameState>()((set, get) => ({
   toggleTravel: () =>
     set((s) => (player.onTram ? {} : { travelOpen: !s.travelOpen, mapOpen: false })),
   closeTravel: () => set((s) => (s.travelOpen ? { travelOpen: false } : {})),
+  toggleDebug: () => {
+    const on = !get().debug;
+    set({ debug: on });
+    get().toast(on ? '🐛 Debug: kollisionsblock synliga (`)' : 'Debug av', 'info');
+  },
   teleport: (x, z, name) => {
     if (player.onTram) return;
     // snap to the nearest walkable spot so we never land inside a building

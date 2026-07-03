@@ -146,3 +146,10 @@ canvas { display: block; touch-action: none; }
   position: fixed; top: 50%; left: 14px; transform: translateY(-50%); z-index: 10;
   writing-mode: vertical-rl; text-orientation: mixed; font-size: 12px; opacity: 0.4; letter-spacing: 0.3em; text-transform: uppercase;
 }
+
+.debug-badge {
+  position: fixed; top: 12px; left: 50%; transform: translateX(-50%); z-index: 12;
+  padding: 4px 12px; border-radius: 999px; font-size: 12px; font-weight: 700; letter-spacing: 0.12em;
+  color: #ff2d55; background: rgba(20, 6, 12, 0.72); border: 1px solid rgba(255, 45, 85, 0.6);
+  text-transform: uppercase; pointer-events: none;
+}

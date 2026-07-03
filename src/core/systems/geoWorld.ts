@@ -85,7 +85,7 @@ export interface TramRoute {
   readonly path: readonly Pt[];
 }
 
-interface AABB {
+export interface AABB {
   minx: number;
   minz: number;
   maxx: number;
@@ -106,6 +106,8 @@ export interface GeoWorld {
   readonly ferryRoutes: readonly (readonly Pt[])[];
   readonly halfX: number;
   readonly halfZ: number;
+  /** Flat list of building footprint boxes — the collision volumes (debug view). */
+  readonly colliders: readonly AABB[];
   blocked(x: number, z: number, r?: number): boolean;
   nearestHood(x: number, z: number): string;
 }
@@ -142,8 +144,9 @@ function buildTramRoutes(snap: GeoSnapshot): TramRoute[] {
   return [...byRef.values()].sort((a, b) => Number(a.ref) - Number(b.ref));
 }
 
-function buildCollision(snap: GeoSnapshot): Map<number, AABB[]> {
+function buildCollision(snap: GeoSnapshot): { grid: Map<number, AABB[]>; boxes: AABB[] } {
   const grid = new Map<number, AABB[]>();
+  const boxes: AABB[] = [];
   for (const b of snap.buildings) {
     let minx = Infinity;
     let minz = Infinity;
@@ -156,6 +159,7 @@ function buildCollision(snap: GeoSnapshot): Map<number, AABB[]> {
       if (z > maxz) maxz = z;
     }
     const box: AABB = { minx, minz, maxx, maxz };
+    boxes.push(box);
     const cx0 = Math.floor(minx / CELL);
     const cx1 = Math.floor(maxx / CELL);
     const cz0 = Math.floor(minz / CELL);
@@ -171,13 +175,13 @@ function buildCollision(snap: GeoSnapshot): Map<number, AABB[]> {
         arr.push(box);
       }
   }
-  return grid;
+  return { grid, boxes };
 }
 
 export async function loadGeoWorld(): Promise<GeoWorld> {
   if (world) return world;
   const snapshot = await loadSnapshot();
-  const grid = buildCollision(snapshot);
+  const { grid, boxes } = buildCollision(snapshot);
   const tramRoutes = buildTramRoutes(snapshot);
   const ferryRoutes = snapshot.ferries
     .filter((f) => polylineLength(f.p) > 60)
@@ -191,6 +195,7 @@ export async function loadGeoWorld(): Promise<GeoWorld> {
     ferryRoutes,
     halfX: WORLD_HALF_X,
     halfZ: WORLD_HALF_Z,
+    colliders: boxes,
     blocked(x, z, r = 0.8) {
       if (Math.abs(x) > WORLD_HALF_X - r || Math.abs(z) > WORLD_HALF_Z - r) return true;
       const cx = Math.floor(x / CELL);

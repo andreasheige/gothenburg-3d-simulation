@@ -53,6 +53,7 @@ export function Systems(): null {
 
   useKeyPress('m', () => useGame.getState().toggleMap());
   useKeyPress('t', () => useGame.getState().toggleTravel());
+  useKeyPress('`', () => useGame.getState().toggleDebug());
   useKeyPress('escape', () => {
     const s = useGame.getState();
     s.closeMap();

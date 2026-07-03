@@ -28,6 +28,7 @@ export function Hud(): React.JSX.Element {
   const interiorId = useGame((s) => s.interiorId);
   const street = useGame((s) => s.street);
   const guide = useGame((s) => s.guide);
+  const debug = useGame((s) => s.debug);
   const wIcon = useWeather((s) => s.icon);
   const wLabel = useWeather((s) => s.label);
   const wTemp = useWeather((s) => s.tempC);
@@ -163,6 +164,8 @@ export function Hud(): React.JSX.Element {
 
       <div className="scene-badge">{scene === 'interior' ? 'Inomhus' : 'Göteborg'}</div>
 
+      {debug && <div className="debug-badge">🐛 DEBUG · kollision</div>}
+
       {scene !== 'interior' && (
         <>
           <Compass />
@@ -176,7 +179,7 @@ export function Hud(): React.JSX.Element {
           <b>WASD</b> gå &nbsp; <b>Shift</b> spring &nbsp; <b>Mus</b> dra för att vrida &nbsp; <b>Hjul</b> zoom
         </div>
         <div>
-          <b>Q/R</b> vrid &nbsp; <b>Z/X</b> luta &nbsp; <b>E</b> interagera &nbsp; <b>F</b> släpp mat &nbsp; <b>M</b> karta &nbsp; <b>T</b> resa
+          <b>Q/R</b> vrid &nbsp; <b>Z/X</b> luta &nbsp; <b>E</b> interagera &nbsp; <b>F</b> släpp mat &nbsp; <b>M</b> karta &nbsp; <b>T</b> resa &nbsp; <b>`</b> debug
         </div>
       </div>
     </>
