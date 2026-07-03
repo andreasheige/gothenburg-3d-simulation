@@ -4,6 +4,7 @@ import { ITEMS } from '@/core/config/items';
 import { VENUES } from '@/domain/venues';
 import { Minimap } from '@/features/hud/Minimap';
 import { Compass } from '@/features/hud/Compass';
+import { TravelMenu } from '@/features/hud/TravelMenu';
 import { currentService } from '@/domain/transit/schedule';
 import type { ItemId } from '@/core/types';
 
@@ -149,6 +150,7 @@ export function Hud(): React.JSX.Element {
         <>
           <Compass />
           <Minimap />
+          <TravelMenu />
         </>
       )}
 
@@ -157,7 +159,7 @@ export function Hud(): React.JSX.Element {
           <b>WASD</b> gå &nbsp; <b>Shift</b> spring &nbsp; <b>Mus</b> dra för att vrida &nbsp; <b>Hjul</b> zoom
         </div>
         <div>
-          <b>Q/R</b> vrid &nbsp; <b>Z/X</b> luta &nbsp; <b>E</b> interagera &nbsp; <b>F</b> släpp mat &nbsp; <b>M</b> karta
+          <b>Q/R</b> vrid &nbsp; <b>Z/X</b> luta &nbsp; <b>E</b> interagera &nbsp; <b>F</b> släpp mat &nbsp; <b>M</b> karta &nbsp; <b>T</b> resa
         </div>
       </div>
     </>

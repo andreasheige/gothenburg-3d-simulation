@@ -96,6 +96,7 @@ export interface GameState {
   street: string;
   guide: { name: string; dist: number } | null;
   mapOpen: boolean;
+  travelOpen: boolean;
 
   // --- actions ---
   advanceTime: (dt: number, dayLength: number) => void;
@@ -103,6 +104,9 @@ export interface GameState {
   setNav: (street: string, guide: { name: string; dist: number } | null) => void;
   toggleMap: () => void;
   closeMap: () => void;
+  toggleTravel: () => void;
+  closeTravel: () => void;
+  teleport: (x: number, z: number, name: string) => void;
   setNearby: (n: Interaction | null) => void;
   setRiding: (id: string | null) => void;
   earn: (n: number) => void;
@@ -149,6 +153,7 @@ export const useGame = create<GameState>()((set, get) => ({
   street: '',
   guide: null,
   mapOpen: false,
+  travelOpen: false,
 
   // ---------- time ----------
   advanceTime: (dt, dayLength) => set((s) => ({ dayT: (s.dayT + dt / dayLength) % 1 })),
@@ -168,6 +173,37 @@ export const useGame = create<GameState>()((set, get) => ({
     }),
   toggleMap: () => set((s) => ({ mapOpen: !s.mapOpen })),
   closeMap: () => set((s) => (s.mapOpen ? { mapOpen: false } : {})),
+  toggleTravel: () =>
+    set((s) => (player.onTram ? {} : { travelOpen: !s.travelOpen, mapOpen: false })),
+  closeTravel: () => set((s) => (s.travelOpen ? { travelOpen: false } : {})),
+  teleport: (x, z, name) => {
+    if (player.onTram) return;
+    // snap to the nearest walkable spot so we never land inside a building
+    const w = geo();
+    let tx = x;
+    let tz = z;
+    if (w.blocked(tx, tz, 1.2)) {
+      const step = 4;
+      outer: for (let r = 1; r < 40; r++) {
+        for (let dy = -r; dy <= r; dy++) {
+          for (let dx = -r; dx <= r; dx++) {
+            if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
+            const cx = x + dx * step;
+            const cz = z + dy * step;
+            if (!w.blocked(cx, cz, 1.2)) {
+              tx = cx;
+              tz = cz;
+              break outer;
+            }
+          }
+        }
+      }
+    }
+    player.x = tx;
+    player.z = tz;
+    set((s) => (s.travelOpen ? { travelOpen: false } : {}));
+    get().toast(`🌀 Reste till ${name}.`, 'good');
+  },
   setNearby: (n) => set({ nearby: n }),
   setRiding: (id) => set({ riding: id }),
 

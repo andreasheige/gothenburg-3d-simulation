@@ -45,7 +45,12 @@ export function Systems(): null {
   const navAcc = useRef(0);
 
   useKeyPress('m', () => useGame.getState().toggleMap());
-  useKeyPress('escape', () => useGame.getState().closeMap());
+  useKeyPress('t', () => useGame.getState().toggleTravel());
+  useKeyPress('escape', () => {
+    const s = useGame.getState();
+    s.closeMap();
+    s.closeTravel();
+  });
 
   useKeyPress('e', () => {
     const s = useGame.getState();
