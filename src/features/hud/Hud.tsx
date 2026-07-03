@@ -154,10 +154,10 @@ export function Hud(): React.JSX.Element {
 
       <div className="help">
         <div>
-          <b>WASD</b> gå &nbsp; <b>Shift</b> spring &nbsp; <b>Q/R</b> rotera kamera
+          <b>WASD</b> gå &nbsp; <b>Shift</b> spring &nbsp; <b>Mus</b> dra för att vrida &nbsp; <b>Hjul</b> zoom
         </div>
         <div>
-          <b>E</b> interagera &nbsp; <b>F</b> släpp mat &nbsp; <b>M</b> karta
+          <b>Q/R</b> vrid &nbsp; <b>Z/X</b> luta &nbsp; <b>E</b> interagera &nbsp; <b>F</b> släpp mat &nbsp; <b>M</b> karta
         </div>
       </div>
     </>
