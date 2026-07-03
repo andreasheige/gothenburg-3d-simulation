@@ -38,8 +38,13 @@ function triangulate(ring: readonly Pt[]): number[][] {
 
 // --- flat areas (water / parks / squares) --------------------------------
 
-export function buildAreaGeometry(areas: readonly GeoArea[], y: number): THREE.BufferGeometry {
+export function buildAreaGeometry(
+  areas: readonly GeoArea[],
+  y: number,
+  uvScale = 0.08,
+): THREE.BufferGeometry {
   const pos: number[] = [];
+  const uv: number[] = [];
   for (const a of areas) {
     const ring = openRing(a.p);
     if (ring.length < 3) continue;
@@ -48,11 +53,13 @@ export function buildAreaGeometry(areas: readonly GeoArea[], y: number): THREE.B
       for (const idx of t) {
         const p = ring[idx]!;
         pos.push(p[0], y, p[1]);
+        uv.push(p[0] * uvScale, p[1] * uvScale);
       }
     }
   }
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
   g.computeVertexNormals();
   return g;
 }
