@@ -11,4 +11,8 @@ export const ITEMS: Record<ItemId, Item> = {
   souvenir: { icon: '🖼️', label: 'Souvenir', price: 80, sellable: true },
   beer: { icon: '🍺', label: 'Stor stark', price: 79 },
   drink: { icon: '🍸', label: 'Drink', price: 129 },
+  fishchips: { icon: '🍟', label: 'Fish & chips', price: 95, food: true },
+  rakmacka: { icon: '🦐', label: 'Räksmörgås', price: 115, food: true },
+  akband: { icon: '🎟️', label: 'Liseberg åkband', price: 495 },
+  nalle: { icon: '🧸', label: 'Vinst-nalle', price: 0, sellable: true },
 };

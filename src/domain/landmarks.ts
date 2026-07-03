@@ -9,11 +9,12 @@ interface LandmarkSeed {
   readonly type: Landmark['type'];
   readonly lon: number;
   readonly lat: number;
+  readonly enterable?: boolean;
 }
 
 const LANDMARK_SEEDS: readonly LandmarkSeed[] = [
-  { id: 'liseberg', name: 'Liseberg', type: 'ferris', lon: 11.9913, lat: 57.6949 },
-  { id: 'feske', name: 'Feskekörka', type: 'church', lon: 11.9557, lat: 57.6996 },
+  { id: 'liseberg', name: 'Liseberg', type: 'ferris', lon: 11.9913, lat: 57.6949, enterable: true },
+  { id: 'feske', name: 'Feskekörka', type: 'fishhall', lon: 11.9557, lat: 57.6996, enterable: true },
   { id: 'domkyrkan', name: 'Domkyrkan', type: 'church', lon: 11.9646, lat: 57.705 },
   { id: 'gotaplatsen', name: 'Götaplatsen', type: 'statue', lon: 11.9793, lat: 57.6975 },
   { id: 'gustafadolf', name: 'Gustaf Adolfs Torg', type: 'fountain', lon: 11.9668, lat: 57.7066 },
@@ -27,5 +28,6 @@ const LANDMARK_SEEDS: readonly LandmarkSeed[] = [
 
 export const LANDMARKS: readonly Landmark[] = LANDMARK_SEEDS.map((l) => {
   const { x, z } = project(l.lon, l.lat);
-  return { id: l.id, name: l.name, type: l.type, x, z };
+  const base = { id: l.id, name: l.name, type: l.type, x, z };
+  return l.enterable === undefined ? base : { ...base, enterable: l.enterable };
 });

@@ -38,11 +38,34 @@ A spherical **orbit-follow** camera around the avatar:
 - Publishes `player.camYaw` each frame for the compass/minimap; movement respects
   `geo().blocked()` collision.
 
-## Interiors — `src/features/interiors/InteriorScene.tsx`
+## Interiors — `src/features/interiors/`
 
-When `scene === 'interior'`, the city is replaced by a room built from
-`domain/interiors.ts` for the entered venue. `exitInterior` returns you just
-outside the door.
+When `scene === 'interior'`, the city is replaced by a bespoke interior scene.
+`InteriorScene.tsx` is a **dispatcher**: it resolves the current `interiorId`
+via `domain/interiors/registry.ts` (`resolveInterior`) to an `InteriorDef` and
+renders the matching scene by `kind`:
+
+- **`NightlifeInterior.tsx`** (`kind: 'nightlife'`) — the themed bar/club room
+  (`domain/interiors/themes.ts`). Layout is varied per venue via a stable
+  `venueSeed` (rug colour, booths, pool table, crowd size) so two venues of the
+  same theme never look identical. Concert venues (`theme: 'concert'`, e.g.
+  Pustervik, Stora Teatern) host a **live concert** whose genre is chosen
+  deterministically per venue+day by `currentConcert` — black metal, hiphop,
+  indie, singer-songwriter or techno — driving the stage backdrop/poster, band
+  line-up, beat-synced lights, haze and crowd energy.
+- **`FishMarketInterior.tsx`** (`kind: 'fishmarket'`) — the enterable Feskekörka
+  hall: daylight, arched windows, fish counters. Walk to a counter and press `E`
+  to buy fresh fish, a räksmörgås, or fish & chips at Kajutan.
+- **`LisebergInterior.tsx`** (`kind: 'amusement'`) — the enterable Liseberg park.
+  Walk between rideable attractions (Balder, Helix, Lisebergshjulet, AtmosFear,
+  Karusellen); pressing `E` triggers a **ride cinematic** (the camera follows the
+  car along a `CatmullRomCurve3` / analytic path). Buy an **åkband** at the gate
+  to ride free, win a nalle at the game stall, or grab a korv.
+
+All interiors share `useWalker.ts` (avatar + WASD locomotion clamped to the
+room), own their own camera, and set the `E`-prompt directly via `setNearby`.
+Enterable **landmarks** (Liseberg, Feskekörka) open interiors from `Systems.tsx`;
+`exitInterior` returns you just outside via `interiorExit`.
 
 ## HUD — `src/features/hud/`
 

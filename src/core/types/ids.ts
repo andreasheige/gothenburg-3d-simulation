@@ -12,10 +12,20 @@ export type ItemId =
   | 'wallet'
   | 'souvenir'
   | 'beer'
-  | 'drink';
+  | 'drink'
+  | 'fishchips'
+  | 'rakmacka'
+  | 'akband'
+  | 'nalle';
 
 /** Interior décor/music themes for enterable venues. */
 export type VenueTheme = 'pub' | 'rock' | 'jazz' | 'disco' | 'concert' | 'cocktail';
+
+/** Which interior scene an enterable place renders. */
+export type InteriorKind = 'nightlife' | 'fishmarket' | 'amusement';
+
+/** Live-concert genres a concert venue can host on a given night. */
+export type ConcertGenre = 'blackmetal' | 'hiphop' | 'indie' | 'singer' | 'techno';
 
 /** Enterable nightlife venue category. */
 export type VenueKind = 'bar' | 'club';
@@ -30,6 +40,7 @@ export type DistrictKind = 'urban' | 'industrial' | 'suburb' | 'park';
 export type LandmarkType =
   | 'ferris'
   | 'church'
+  | 'fishhall'
   | 'statue'
   | 'fountain'
   | 'fort'
@@ -78,7 +89,16 @@ export type StationId =
 export type SceneId = 'city' | 'interior';
 
 /** Categories of proximity interaction surfaced to the player. */
-export type InteractionKind = 'venue' | 'shop' | 'landmark' | 'tourist' | 'tram' | 'bar' | 'exit';
+export type InteractionKind =
+  | 'venue'
+  | 'shop'
+  | 'landmark'
+  | 'tourist'
+  | 'tram'
+  | 'bar'
+  | 'exit'
+  | 'buy'
+  | 'ride';
 
 /** Toast severity, drives the coloured left border. */
 export type ToastKind = 'info' | 'good' | 'bad' | 'warn';

@@ -96,6 +96,8 @@ export interface Landmark {
   readonly type: LandmarkType;
   readonly x: World;
   readonly z: World;
+  /** When true, pressing E enters a dedicated interior scene instead of a photo. */
+  readonly enterable?: boolean;
 }
 
 /** A floating street-name label. */

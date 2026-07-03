@@ -30,8 +30,11 @@ src/
 │   ├── transit/
 │   │   ├── schedule.ts      # synthetic Västtrafik timetable (headways, service bands)
 │   │   └── stops.ts         # shared stop math (dwell distances + deduped stop markers)
-│   ├── interiors.ts         # interior room definitions
-│   ├── landmarks.ts         # LANDMARKS (Liseberg, Feskekörka, …)
+│   ├── interiors/           # interior domain module (barrel via index.ts)
+│   │   ├── themes.ts        #   nightlife THEMES + ROOM dims
+│   │   ├── concerts.ts      #   concert genres + currentConcert(venue, day)
+│   │   └── registry.ts      #   resolveInterior / interiorExit / venueSeed
+│   ├── landmarks.ts         # LANDMARKS (Liseberg, Feskekörka, …; enterable flag)
 │   ├── portals.ts           # PORTALS fast-travel hubs (projected lon/lat)
 │   └── venues.ts            # VENUES (bars/clubs) + SHOPS
 │
@@ -44,7 +47,8 @@ src/
 │   ├── npcs/                # Pedestrians.tsx, Seagulls.tsx (boids)
 │   ├── player/              # Player.tsx (movement + orbit camera)
 │   ├── weather/             # Rain.tsx
-│   ├── interiors/           # InteriorScene.tsx (inside venues)
+│   ├── interiors/           # InteriorScene dispatcher + Nightlife/FishMarket/Liseberg
+│   │                        #   scenes + useWalker locomotion hook
 │   ├── hud/                 # Hud, Compass, Minimap, TravelMenu
 │   └── systems/             # Systems.tsx — the per-frame gameplay loop (renders null)
 │

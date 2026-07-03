@@ -48,7 +48,6 @@ interface ShopSeed {
 const SHOP_SEEDS: readonly ShopSeed[] = [
   { id: 'husaren', name: 'Café Husaren', kind: 'cafe', lon: 11.9563, lat: 57.6999, sells: ['kanelbulle', 'coffee'] },
   { id: 'brunnskorv', name: 'Korvkiosk Brunnsparken', kind: 'kiosk', lon: 11.9668, lat: 57.7069, sells: ['korv', 'coffee'] },
-  { id: 'feske', name: 'Feskekörka Fiskdisk', kind: 'fish', lon: 11.9557, lat: 57.6996, sells: ['fish'] },
   { id: 'avenyfik', name: 'Condeco Avenyn', kind: 'cafe', lon: 11.97, lat: 57.701, sells: ['kanelbulle', 'coffee'] },
   { id: 'lisesouv', name: 'Liseberg Souvenir', kind: 'shop', lon: 11.9905, lat: 57.6952, sells: ['souvenir'] },
   { id: 'nordkiosk', name: 'Nordstan Pressbyrå', kind: 'kiosk', lon: 11.9685, lat: 57.7085, sells: ['korv', 'kanelbulle'] },

@@ -3,7 +3,7 @@ import { ITEMS } from '@/core/config/items';
 import { project } from '@/domain/geo/meta';
 import { realDayT } from '@/core/systems/time';
 import { geo } from '@/core/systems/geoWorld';
-import { VENUES } from '@/domain/venues';
+import { resolveInterior, interiorExit } from '@/domain/interiors';
 import type {
   Interaction,
   ItemId,
@@ -123,6 +123,9 @@ export interface GameState {
   exitInterior: () => void;
   buyFromShop: (shop: Shop) => void;
   buyDrink: (venue: Venue) => void;
+  buyItem: (id: ItemId, bonus?: number) => boolean;
+  rideAttraction: (name: string, cost: number, thrill: number) => boolean;
+  playGame: (cost: number) => void;
   pickpocket: () => void;
   giveChange: () => void;
   visitLandmark: (lm: Landmark) => void;
@@ -247,19 +250,18 @@ export const useGame = create<GameState>()((set, get) => ({
   },
 
   // ---------- scene transitions ----------
-  enterInterior: (venueId) => {
-    const v = VENUES.find((x) => x.id === venueId);
-    if (!v) return;
-    set({ scene: 'interior', interiorId: venueId });
-    get().toast(`Du gick in på ${v.name}.`, 'info');
+  enterInterior: (id) => {
+    const def = resolveInterior(id);
+    if (!def) return;
+    set({ scene: 'interior', interiorId: id });
+    get().toast(`Du gick in på ${def.name}.`, 'info');
   },
   exitInterior: () => {
-    const v = VENUES.find((x) => x.id === get().interiorId);
+    const exit = interiorExit(get().interiorId);
     set({ scene: 'city', interiorId: null });
-    if (v) {
-      // Place the player just outside the door.
-      player.x = v.x;
-      player.z = v.z + 3;
+    if (exit) {
+      player.x = exit.x;
+      player.z = exit.z;
     }
   },
 
@@ -320,6 +322,55 @@ export const useGame = create<GameState>()((set, get) => ({
     g.toast(`${it.icon} ${it.label} på ${venue.name}. +${bonus} poäng.`, 'good');
     if (night && venue.kind === 'club' && Math.random() < 0.15) {
       g.addWanted(1.0, 'Fyllestök utanför klubben');
+    }
+  },
+
+  // ---------- generic over-the-counter purchase (fish market, food stalls) ----------
+  buyItem: (id, bonus = 3) => {
+    const g = get();
+    const it = ITEMS[id];
+    if (g.wallet < it.price) {
+      g.toast(`Inte råd med ${it.label} (${it.price} kr).`, 'warn');
+      return false;
+    }
+    if (!g.pay(it.price)) return false;
+    g.addItem(id);
+    g.addScore(bonus);
+    g.toast(`Köpte ${it.icon} ${it.label} (${it.price} kr).`, 'good');
+    return true;
+  },
+
+  // ---------- Liseberg rides ----------
+  rideAttraction: (name, cost, thrill) => {
+    const g = get();
+    const hasBand = g.hasItem('akband');
+    if (!hasBand) {
+      if (g.wallet < cost) {
+        g.toast(`${name} kostar ${cost} kr — köp åkband eller mer pengar.`, 'warn');
+        return false;
+      }
+      g.pay(cost);
+    }
+    g.addScore(thrill);
+    g.toast(`🎢 Du åkte ${name}! ${hasBand ? '(åkband)' : `−${cost} kr`} +${thrill} poäng`, 'good');
+    return true;
+  },
+
+  // ---------- Liseberg carnival game ----------
+  playGame: (cost) => {
+    const g = get();
+    if (g.wallet < cost) {
+      g.toast(`Spelet kostar ${cost} kr.`, 'warn');
+      return;
+    }
+    if (!g.pay(cost)) return;
+    if (Math.random() < 0.4) {
+      g.addItem('nalle');
+      g.addScore(12);
+      g.toast('🧸 Grattis — du vann en nalle!', 'good');
+    } else {
+      g.addScore(2);
+      g.toast('Ingen vinst den här gången. Försök igen!', 'info');
     }
   },
 

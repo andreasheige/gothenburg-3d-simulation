@@ -2,6 +2,7 @@ import { useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { VENUES, SHOPS } from '@/domain/venues';
+import { currentConcert, isConcertVenue } from '@/domain/interiors';
 import { useGame } from '@/state/store';
 import { BillboardLabel } from '@/shared/three/BillboardLabel';
 import type { Shop as ShopData, Venue as VenueData, VenueKind, ShopKind } from '@/core/types';
@@ -18,6 +19,7 @@ const SHOP_COLOR: Record<ShopKind, string> = {
 function Venue({ v }: { v: VenueData }): React.JSX.Element {
   const glowRef = useRef<THREE.PointLight>(null);
   const color = KIND_COLOR[v.kind];
+  const concert = isConcertVenue(v) ? currentConcert(v.id) : null;
   useFrame((state) => {
     if (glowRef.current) {
       const h = (useGame.getState().dayT * 24) % 24;
@@ -46,6 +48,11 @@ function Venue({ v }: { v: VenueData }): React.JSX.Element {
       <BillboardLabel position={[0, 4.2, 0.2]} fontSize={0.62} maxWidth={5}>
         {v.name}
       </BillboardLabel>
+      {concert && (
+        <BillboardLabel position={[0, 3.5, 0.2]} fontSize={0.4} color={concert.light} outlineWidth={0.03} maxWidth={6}>
+          {`🎫 ikväll: ${concert.label}`}
+        </BillboardLabel>
+      )}
       <pointLight ref={glowRef} position={[0, 2.6, 1]} color={color} distance={12} intensity={0.4} />
     </group>
   );

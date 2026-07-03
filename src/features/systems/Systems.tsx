@@ -31,7 +31,14 @@ const STATIC: Candidate[] = [
     reach: 4.5,
     label: s.buysLoot ? `Sälj loot — ${s.name}` : `Handla — ${s.name}`,
   })),
-  ...LANDMARKS.map((l): Candidate => ({ kind: 'landmark', ref: l, x: l.x, z: l.z, reach: 12, label: `Ta ett foto — ${l.name}` })),
+  ...LANDMARKS.map((l): Candidate => ({
+    kind: 'landmark',
+    ref: l,
+    x: l.x,
+    z: l.z,
+    reach: l.enterable ? 10 : 12,
+    label: l.enterable ? `Gå in i ${l.name}` : `Ta ett foto — ${l.name}`,
+  })),
 ];
 
 interface Best {
@@ -76,9 +83,12 @@ export function Systems(): null {
       case 'shop':
         s.buyFromShop(n.ref as Shop);
         break;
-      case 'landmark':
-        s.visitLandmark(n.ref as Landmark);
+      case 'landmark': {
+        const lm = n.ref as Landmark;
+        if (lm.enterable) s.enterInterior(lm.id);
+        else s.visitLandmark(lm);
         break;
+      }
       case 'tourist':
         s.pickpocket();
         break;

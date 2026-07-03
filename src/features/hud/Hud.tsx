@@ -1,7 +1,7 @@
 import { useGame } from '@/state/store';
 import { useWeather } from '@/state/weather';
 import { ITEMS } from '@/core/config/items';
-import { VENUES } from '@/domain/venues';
+import { resolveInterior, THEMES, currentConcert, isConcertVenue } from '@/domain/interiors';
 import { Minimap } from '@/features/hud/Minimap';
 import { Compass } from '@/features/hud/Compass';
 import { TravelMenu } from '@/features/hud/TravelMenu';
@@ -34,8 +34,19 @@ export function Hud(): React.JSX.Element {
   const wOnline = useWeather((s) => s.online);
 
   const stars = Math.round(wanted);
-  const venue = interiorId ? VENUES.find((v) => v.id === interiorId) : undefined;
-  const place = scene === 'interior' && venue ? venue.name : district;
+  const interiorDef = scene === 'interior' ? resolveInterior(interiorId) : null;
+  const place = interiorDef ? interiorDef.name : district;
+  let interiorInfo: string | null = null;
+  if (interiorDef) {
+    if (interiorDef.kind === 'nightlife') {
+      const v = interiorDef.venue;
+      interiorInfo = isConcertVenue(v) ? currentConcert(v.id).music : THEMES[v.theme].music;
+    } else if (interiorDef.kind === 'fishmarket') {
+      interiorInfo = '🐟 Fiskhallen — färsk fisk & skaldjur';
+    } else {
+      interiorInfo = '🎢 Nöjespark — åk attraktioner';
+    }
+  }
   const trafik = currentService('3');
 
   const invSlots = (Object.entries(inventory) as [ItemId, number | undefined][]).filter(
@@ -51,6 +62,12 @@ export function Hud(): React.JSX.Element {
             <span className="lbl">Plats</span>
             <span className="val">{place}</span>
           </div>
+          {scene === 'interior' && interiorInfo && (
+            <div className="row">
+              <span className="lbl">Scen</span>
+              <span className="val">{interiorInfo}</span>
+            </div>
+          )}
           {scene !== 'interior' && street && (
             <div className="row">
               <span className="lbl">Gata</span>

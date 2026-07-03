@@ -59,6 +59,53 @@ function Church(): React.JSX.Element {
   );
 }
 
+/** Feskekörka: a long wooden fish hall with a steep triangular gable roof. */
+function FishHall(): React.JSX.Element {
+  return (
+    <group>
+      {/* hall body */}
+      <mesh position={[0, 3, 0]} castShadow>
+        <boxGeometry args={[9, 6, 20]} />
+        <meshStandardMaterial color="#c9b79c" roughness={0.95} />
+      </mesh>
+      {/* steep gable roof (two slanted planes) */}
+      <mesh position={[-2.4, 8.2, 0]} rotation={[0, 0, -0.68]}>
+        <boxGeometry args={[6.6, 0.4, 20.6]} />
+        <meshStandardMaterial color="#6e4a30" roughness={0.9} />
+      </mesh>
+      <mesh position={[2.4, 8.2, 0]} rotation={[0, 0, 0.68]}>
+        <boxGeometry args={[6.6, 0.4, 20.6]} />
+        <meshStandardMaterial color="#6e4a30" roughness={0.9} />
+      </mesh>
+      {/* gable end triangles */}
+      {[-10, 10].map((z) => (
+        <mesh key={z} position={[0, 8, z]}>
+          <coneGeometry args={[5.2, 4.6, 3]} />
+          <meshStandardMaterial color="#b7a488" />
+        </mesh>
+      ))}
+      {/* tall arched windows glowing along both sides */}
+      {[-6, -2, 2, 6].map((z) => (
+        <group key={z}>
+          <mesh position={[-4.55, 3.4, z]}>
+            <planeGeometry args={[0.1, 3.2]} />
+            <meshStandardMaterial color="#bfe0ea" emissive="#8fc0d6" emissiveIntensity={0.5} />
+          </mesh>
+          <mesh position={[4.55, 3.4, z]} rotation={[0, Math.PI, 0]}>
+            <planeGeometry args={[0.1, 3.2]} />
+            <meshStandardMaterial color="#bfe0ea" emissive="#8fc0d6" emissiveIntensity={0.5} />
+          </mesh>
+        </group>
+      ))}
+      {/* ridge finial */}
+      <mesh position={[0, 11, 9.5]}>
+        <coneGeometry args={[0.6, 1.6, 4]} />
+        <meshStandardMaterial color="#3a6b8f" />
+      </mesh>
+    </group>
+  );
+}
+
 function Statue(): React.JSX.Element {
   return (
     <group>
@@ -220,9 +267,62 @@ function Stadium(): React.JSX.Element {
   );
 }
 
+/** Liseberg park exterior: the big wheel plus an entrance arch, a coaster hill
+ *  silhouette and a free-fall tower so it reads as the whole park from outside. */
+function LisebergPark(): React.JSX.Element {
+  const coaster = useMemo(() => {
+    const pts = [
+      new THREE.Vector3(-12, 0.5, 8),
+      new THREE.Vector3(-8, 10, 6),
+      new THREE.Vector3(-3, 4, 4),
+      new THREE.Vector3(2, 13, 2),
+      new THREE.Vector3(7, 3, 4),
+      new THREE.Vector3(12, 8, 8),
+    ];
+    return new THREE.CatmullRomCurve3(pts);
+  }, []);
+  return (
+    <group>
+      <FerrisWheel />
+      {/* entrance arch */}
+      <group position={[0, 0, 14]}>
+        <mesh position={[-5, 3, 0]}>
+          <boxGeometry args={[1, 6, 1]} />
+          <meshStandardMaterial color="#b23b2e" />
+        </mesh>
+        <mesh position={[5, 3, 0]}>
+          <boxGeometry args={[1, 6, 1]} />
+          <meshStandardMaterial color="#b23b2e" />
+        </mesh>
+        <mesh position={[0, 6.4, 0]}>
+          <boxGeometry args={[11, 1.6, 1]} />
+          <meshStandardMaterial color="#d9c24f" emissive="#e0a020" emissiveIntensity={0.5} />
+        </mesh>
+      </group>
+      {/* coaster hill silhouette */}
+      <group position={[-16, 0, -6]}>
+        <mesh>
+          <tubeGeometry args={[coaster, 80, 0.25, 6, false]} />
+          <meshStandardMaterial color="#c98a4a" roughness={0.6} metalness={0.2} />
+        </mesh>
+      </group>
+      {/* free-fall tower */}
+      <mesh position={[16, 13, -4]} castShadow>
+        <boxGeometry args={[1.2, 26, 1.2]} />
+        <meshStandardMaterial color="#9aa7b2" metalness={0.4} />
+      </mesh>
+      <mesh position={[16, 26.5, -4]}>
+        <coneGeometry args={[1, 1.6, 8]} />
+        <meshStandardMaterial color="#d0407f" />
+      </mesh>
+    </group>
+  );
+}
+
 const BUILDERS: Record<LandmarkType, () => React.JSX.Element> = {
-  ferris: FerrisWheel,
+  ferris: LisebergPark,
   church: Church,
+  fishhall: FishHall,
   statue: Statue,
   fountain: Fountain,
   fort: Fort,
@@ -238,7 +338,7 @@ export function Landmarks(): React.JSX.Element {
     <group>
       {LANDMARKS.map((lm) => {
         const B = BUILDERS[lm.type];
-        const labelY = lm.type === 'tower' ? 38 : lm.type === 'ferris' ? 20 : 11;
+        const labelY = lm.type === 'tower' ? 38 : lm.type === 'ferris' ? 20 : lm.type === 'fishhall' ? 13 : 11;
         return (
           <group key={lm.id} position={[lm.x, 0, lm.z]}>
             <B />
