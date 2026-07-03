@@ -180,13 +180,30 @@ export function buildRailsGeometry(
   return g;
 }
 
+// Authentic central-Gothenburg palette: landshövdingehus earthy tones (ochre,
+// terracotta, sage, dusty blue) mixed with muted "stenstaden" stone facades
+// (beige, cream, pale grey). RGB in 0..1.
 const FACADES: [number, number, number][] = [
-  [0.72, 0.66, 0.55],
-  [0.66, 0.6, 0.5],
-  [0.6, 0.56, 0.5],
-  [0.76, 0.7, 0.6],
-  [0.56, 0.52, 0.48],
-  [0.68, 0.62, 0.54],
+  [0.82, 0.68, 0.44], // ochre / mustard
+  [0.74, 0.47, 0.38], // terracotta
+  [0.58, 0.63, 0.52], // muted sage green
+  [0.57, 0.64, 0.68], // dusty blue
+  [0.84, 0.77, 0.64], // warm beige
+  [0.73, 0.72, 0.69], // pale stone grey
+  [0.87, 0.81, 0.69], // cream
+  [0.68, 0.44, 0.38], // brick red
+  [0.79, 0.73, 0.58], // sandstone
+  [0.5, 0.55, 0.58], // slate blue-grey
+];
+
+// Roofs get their own darker palette (slate, charcoal, verdigris copper,
+// terracotta tile) so the city reads well from above and from the minimap.
+const ROOFS: [number, number, number][] = [
+  [0.33, 0.35, 0.39], // slate grey
+  [0.25, 0.26, 0.29], // charcoal
+  [0.27, 0.3, 0.33], // dark blue-slate
+  [0.4, 0.53, 0.49], // verdigris copper
+  [0.58, 0.35, 0.28], // terracotta tile
 ];
 
 // Metres covered by one texture tile (an 8×8 window grid) horizontally and
@@ -223,13 +240,23 @@ export function buildBuildingsGeometry(buildings: readonly GeoBuilding[]): Build
     const rg = c.g;
     const rb = c.b;
 
+    // roof colour: mostly slate/charcoal, occasionally verdigris or terracotta,
+    // biased so darker roofs dominate the skyline.
+    const rk = hash(first[0] * 1.7, first[1] * 0.9);
+    const roofIdx = rk < 0.4 ? 0 : rk < 0.68 ? 1 : rk < 0.82 ? 2 : rk < 0.92 ? 3 : 4;
+    const roof = ROOFS[roofIdx]!;
+    c.setRGB(roof[0], roof[1], roof[2]).offsetHSL(0, 0, (hash(first[1], first[0]) - 0.5) * 0.05);
+    const fr = c.r;
+    const fg = c.g;
+    const fb = c.b;
+
     // roof (no window texture)
     const tris = triangulate(ring);
     for (const t of tris) {
       for (const idx of t) {
         const p = ring[idx]!;
         rpos.push(p[0], h, p[1]);
-        rcol.push(rr * 1.08, rg * 1.08, rb * 1.08);
+        rcol.push(fr, fg, fb);
       }
     }
 
