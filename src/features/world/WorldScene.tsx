@@ -9,6 +9,7 @@ import { Portals } from './components/Portals';
 import { StreetLabels } from './components/StreetLabels';
 import { VenueDoors } from './components/VenueDoors';
 import { TramSystem } from '@/features/transit/TramSystem';
+import { TransitStops } from '@/features/transit/components/TransitStops';
 import { Pedestrians } from '@/features/npcs/Pedestrians';
 import { Seagulls } from '@/features/npcs/Seagulls';
 import { Rain } from '@/features/weather/Rain';
@@ -30,6 +31,7 @@ export function WorldScene(): React.JSX.Element {
       <StreetLabels />
       <VenueDoors />
       <TramSystem />
+      <TransitStops />
       <Pedestrians />
       <Seagulls />
       <Rain />

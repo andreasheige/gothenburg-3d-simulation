@@ -1,7 +1,6 @@
 import { useMemo, useRef, useEffect } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
-import type { Pt } from '@/domain/geo/snapshot';
 import { geo } from '@/core/systems/geoWorld';
 import { buildPathXZ, samplePath } from '@/core/math/path';
 import type { Path } from '@/core/math/path';
@@ -9,13 +8,10 @@ import { registry } from '@/core/systems/registry';
 import { player, useGame } from '@/state/store';
 import { realDayT } from '@/core/systems/time';
 import { tramCountFor, isWeekendNow } from '@/domain/transit/schedule';
+import { longestInBounds, buildStopDists } from '@/domain/transit/stops';
+import type { StopDist } from '@/domain/transit/stops';
 import { Character } from '@/shared/three/Character';
 import type { TramRuntime } from '@/core/types';
-
-interface StopDist {
-  name: string;
-  d: number;
-}
 
 interface LineRef {
   id: string;
@@ -28,23 +24,6 @@ interface TramConfig {
   path: Path;
   stops: readonly StopDist[];
   count: number;
-}
-
-// Longest contiguous run of a route polyline that stays inside the world box, so
-// trams travel the central city instead of disappearing toward the suburbs.
-function longestInBounds(path: readonly Pt[], hx: number, hz: number): Pt[] {
-  const m = 150;
-  let best: Pt[] = [];
-  let cur: Pt[] = [];
-  for (const p of path) {
-    if (Math.abs(p[0]) < hx + m && Math.abs(p[1]) < hz + m) {
-      cur.push(p);
-      if (cur.length > best.length) best = cur;
-    } else {
-      cur = [];
-    }
-  }
-  return best;
 }
 
 function TramMesh({ color, length }: { color: string; length: number }): React.JSX.Element {
@@ -265,11 +244,7 @@ export function TramSystem(): React.JSX.Element {
       const clipped = longestInBounds(route.path, w.halfX, w.halfZ);
       if (clipped.length < 2) continue;
       const path = buildPathXZ(clipped, 0.6);
-      const stops: StopDist[] = [];
-      for (let d = 300; d < path.length - 60; d += 340) {
-        const { pos } = samplePath(path, d);
-        stops.push({ name: w.nearestHood(pos.x, pos.z), d });
-      }
+      const stops = buildStopDists(path, (x, z) => w.nearestHood(x, z));
       // Fleet size follows the synthetic timetable for the current hour.
       const count = tramCountFor(route.ref, hour, weekend);
       out.push({ line: { id: route.ref, name: route.name, color: route.color }, path, stops, count });
