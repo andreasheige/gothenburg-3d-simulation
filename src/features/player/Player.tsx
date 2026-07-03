@@ -26,6 +26,7 @@ export function Player(): React.JSX.Element {
   const yaw = useRef(0.6); // camera orbit yaw around the player
   const pitch = useRef(0.62); // camera elevation angle
   const dist = useRef(17); // camera distance (zoom)
+  const wasRiding = useRef(false); // detect board/exit transitions
 
   // Mouse-drag orbit + wheel zoom, bound to the WebGL canvas.
   useEffect(() => {
@@ -82,6 +83,19 @@ export function Player(): React.JSX.Element {
     const w = geo();
     const riding = !!player.onTram;
 
+    // On boarding / exiting, snap the orbit camera to a sensible pose so the
+    // player drops into a 3/4 cutaway view inside the cabin, then walking view.
+    if (riding !== wasRiding.current) {
+      if (riding) {
+        pitch.current = 0.72;
+        dist.current = 13;
+      } else {
+        pitch.current = 0.62;
+        dist.current = 17;
+      }
+      wasRiding.current = riding;
+    }
+
     if (!riding) {
       const ax = input.axis();
       // camera-relative movement
@@ -103,8 +117,10 @@ export function Player(): React.JSX.Element {
         walkPhase.current += dt * speed * 1.4;
       }
     } else {
-      // face along ride; legs still
+      // face along ride; legs still. Keep the camera looking down the aisle by
+      // tracking the tram heading, so turns don't leave us staring at a wall.
       walkPhase.current = 0;
+      if (player.onTram) yaw.current = player.onTram.angle + 0.6;
     }
 
     // keyboard camera nudge (mouse drag is the primary control)
@@ -125,7 +141,7 @@ export function Player(): React.JSX.Element {
     }
 
     // spherical follow camera (yaw + pitch + zoom)
-    const baseDist = riding ? Math.max(dist.current, 20) : dist.current;
+    const baseDist = dist.current;
     const cp = Math.cos(pitch.current);
     const sp = Math.sin(pitch.current);
     const dirx = -Math.sin(yaw.current);

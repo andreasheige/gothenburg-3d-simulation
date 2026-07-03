@@ -6,9 +6,10 @@ import { geo } from '@/core/systems/geoWorld';
 import { buildPathXZ, samplePath } from '@/core/math/path';
 import type { Path } from '@/core/math/path';
 import { registry } from '@/core/systems/registry';
-import { player } from '@/state/store';
+import { player, useGame } from '@/state/store';
 import { realDayT } from '@/core/systems/time';
 import { tramCountFor, isWeekendNow } from '@/domain/transit/schedule';
+import { Character } from '@/shared/three/Character';
 import type { TramRuntime } from '@/core/types';
 
 interface StopDist {
@@ -69,6 +70,73 @@ function TramMesh({ color, length }: { color: string; length: number }): React.J
   );
 }
 
+// Open cutaway cabin shown only while the player rides this tram: floor, low
+// coloured side walls (roof removed so the orbit camera can peek in), two
+// longitudinal benches, grab poles + ceiling rail and the seated player avatar.
+function TramInterior({ color, length }: { color: string; length: number }): React.JSX.Element {
+  const half = length / 2;
+  const poleZs = [-half + 4.5, -half + 1.5, 0, half - 1.5, half - 4.5];
+  return (
+    <group>
+      {/* floor */}
+      <mesh position={[0, 0.85, 0]} receiveShadow>
+        <boxGeometry args={[2.34, 0.1, length - 0.4]} />
+        <meshStandardMaterial color="#39434d" roughness={0.85} />
+      </mesh>
+      {/* low side walls (cutaway: open roof) */}
+      {[-1.15, 1.15].map((x) => (
+        <mesh key={x} position={[x, 1.15, 0]}>
+          <boxGeometry args={[0.08, 0.6, length - 0.4]} />
+          <meshStandardMaterial color={color} roughness={0.5} metalness={0.2} />
+        </mesh>
+      ))}
+      {/* end walls (low) */}
+      {[-half + 0.1, half - 0.1].map((z) => (
+        <mesh key={z} position={[0, 1.15, z]}>
+          <boxGeometry args={[2.34, 0.6, 0.08]} />
+          <meshStandardMaterial color="#dfe4e8" roughness={0.6} />
+        </mesh>
+      ))}
+      {/* longitudinal benches along both sides */}
+      {[-0.82, 0.82].map((x) => (
+        <group key={x}>
+          <mesh position={[x, 1.16, 0]} castShadow>
+            <boxGeometry args={[0.66, 0.12, length - 1.4]} />
+            <meshStandardMaterial color={color} roughness={0.6} />
+          </mesh>
+          <mesh position={[x, 1.0, 0]}>
+            <boxGeometry args={[0.6, 0.3, length - 1.4]} />
+            <meshStandardMaterial color="#5a636c" roughness={0.7} />
+          </mesh>
+        </group>
+      ))}
+      {/* vertical grab poles */}
+      {poleZs.map((z) => (
+        <mesh key={z} position={[0, 1.65, z]}>
+          <cylinderGeometry args={[0.04, 0.04, 1.6, 8]} />
+          <meshStandardMaterial color="#e6c33a" metalness={0.6} roughness={0.3} />
+        </mesh>
+      ))}
+      {/* horizontal ceiling grab rail */}
+      <mesh position={[0, 2.45, 0]} rotation={[Math.PI / 2, 0, 0]}>
+        <cylinderGeometry args={[0.04, 0.04, length - 1.5, 8]} />
+        <meshStandardMaterial color="#e6c33a" metalness={0.6} roughness={0.3} />
+      </mesh>
+      {/* a few seated passengers for life */}
+      <group position={[0.5, 1.05, -half + 6]} rotation={[0, -Math.PI / 2, 0]}>
+        <Character colors={{ coat: '#3a6ea5', hat: '#b23b3b', skin: '#d9a877' }} />
+      </group>
+      <group position={[0.5, 1.05, half - 5]} rotation={[0, -Math.PI / 2, 0]}>
+        <Character colors={{ coat: '#4c8c5a', hat: '#2b3550', skin: '#e6b98f' }} />
+      </group>
+      {/* the player, seated on the left bench near the rear (toward the camera) */}
+      <group position={[-0.5, 1.05, -half + 3]} rotation={[0, Math.PI / 2, 0]}>
+        <Character colors={{ coat: '#d8863a', hat: '#1f6f52' }} />
+      </group>
+    </group>
+  );
+}
+
 interface TramProps extends TramConfig {
   index: number;
   count: number;
@@ -77,6 +145,7 @@ interface TramProps extends TramConfig {
 function Tram({ line, path, stops, index, count }: TramProps): React.JSX.Element {
   const groupRef = useRef<THREE.Group>(null);
   const speed = 12;
+  const ridingId = useGame((s) => s.riding);
   const runtime = useRef<TramRuntime>({
     line,
     dir: (index % 2 === 0 ? 1 : -1) as 1 | -1,
@@ -86,6 +155,7 @@ function Tram({ line, path, stops, index, count }: TramProps): React.JSX.Element
     stationName: '',
     doorsOpen: false,
     pos: { x: 0, z: 0 },
+    angle: 0,
   }).current;
 
   useEffect(() => {
@@ -125,9 +195,10 @@ function Tram({ line, path, stops, index, count }: TramProps): React.JSX.Element
     const { pos, tangent } = samplePath(path, rt.dist);
     rt.pos.x = pos.x;
     rt.pos.z = pos.z;
+    rt.angle = Math.atan2(tangent.x, tangent.z);
     if (groupRef.current) {
       groupRef.current.position.set(pos.x, 0, pos.z);
-      groupRef.current.rotation.y = Math.atan2(tangent.x, tangent.z);
+      groupRef.current.rotation.y = rt.angle;
     }
     if (player.onTram === rt) {
       player.x = pos.x;
@@ -135,9 +206,15 @@ function Tram({ line, path, stops, index, count }: TramProps): React.JSX.Element
     }
   });
 
+  const mine = ridingId !== null && player.onTram === runtime;
+
   return (
     <group ref={groupRef}>
-      <TramMesh color={line.color} length={20} />
+      {mine ? (
+        <TramInterior color={line.color} length={20} />
+      ) : (
+        <TramMesh color={line.color} length={20} />
+      )}
     </group>
   );
 }

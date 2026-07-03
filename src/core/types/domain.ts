@@ -153,6 +153,8 @@ export interface TramRuntime {
   stationName: string;
   doorsOpen: boolean;
   pos: Vec2;
+  /** World heading (radians), so the rider camera + cabin can orient. */
+  angle: number;
 }
 
 /** Runtime state of a pickpocketable tourist, registered for proximity checks. */
