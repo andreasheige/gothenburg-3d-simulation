@@ -5,6 +5,8 @@ import { player, useGame } from '@/state/store';
 import { registry } from '@/core/systems/registry';
 import { LANDMARKS } from '@/domain/landmarks';
 import { VENUES } from '@/domain/venues';
+import { PORTALS } from '@/domain/portals';
+import { buildTransitStops, type TransitStop } from '@/domain/transit/stops';
 import type { Pt } from '@/domain/geo/snapshot';
 
 // Base map scale (pixels per world metre) used both for the offscreen base
@@ -108,31 +110,93 @@ function diamond(
   ctx.stroke();
 }
 
-// Player marker: a triangle pointing where the camera looks. Camera facing in
-// world space is (sin yaw, cos yaw); on the north-up canvas that screen vector
-// has angle atan2(cos yaw, sin yaw).
-function drawArrow(ctx: CanvasRenderingContext2D, cx: number, cy: number, yaw: number): void {
+// Prominent player marker: a pulsing glow halo plus a bold triangle pointing
+// where the camera looks. Camera facing in world space is (sin yaw, cos yaw);
+// on the north-up canvas that screen vector has angle atan2(cos yaw, sin yaw).
+function drawPlayer(
+  ctx: CanvasRenderingContext2D,
+  cx: number,
+  cy: number,
+  yaw: number,
+  scale = 1,
+): void {
+  const pulse = 1 + 0.18 * Math.sin(performance.now() / 220);
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(cx, cy, 13 * scale * pulse, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(56,208,255,0.16)';
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(cx, cy, 10 * scale * pulse, 0, Math.PI * 2);
+  ctx.strokeStyle = 'rgba(56,208,255,0.95)';
+  ctx.lineWidth = 2.4 * scale;
+  ctx.stroke();
+  ctx.restore();
+
   ctx.save();
   ctx.translate(cx, cy);
   ctx.rotate(Math.atan2(Math.cos(yaw), Math.sin(yaw)));
   ctx.beginPath();
-  ctx.moveTo(8, 0);
-  ctx.lineTo(-5, -5);
-  ctx.lineTo(-2, 0);
-  ctx.lineTo(-5, 5);
+  ctx.moveTo(11 * scale, 0);
+  ctx.lineTo(-7 * scale, -7 * scale);
+  ctx.lineTo(-3 * scale, 0);
+  ctx.lineTo(-7 * scale, 7 * scale);
   ctx.closePath();
-  ctx.fillStyle = '#ffffff';
-  ctx.strokeStyle = '#12171d';
-  ctx.lineWidth = 1.2;
+  ctx.fillStyle = '#38d0ff';
+  ctx.strokeStyle = '#0a1016';
+  ctx.lineWidth = 1.6 * scale;
   ctx.fill();
   ctx.stroke();
   ctx.restore();
+}
+
+// A hållplats marker: a small white square with a dark border.
+function stopSquare(ctx: CanvasRenderingContext2D, x: number, y: number, r: number): void {
+  ctx.fillStyle = '#eef4f9';
+  ctx.strokeStyle = '#0e6f9e';
+  ctx.lineWidth = 1.4;
+  ctx.fillRect(x - r, y - r, r * 2, r * 2);
+  ctx.strokeRect(x - r, y - r, r * 2, r * 2);
+}
+
+// A fast-travel portal marker: a glowing ring in the portal colour.
+function portalRing(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  color: string,
+  r: number,
+): void {
+  const pulse = 1 + 0.12 * Math.sin(performance.now() / 260);
+  ctx.beginPath();
+  ctx.arc(x, y, r * 1.7 * pulse, 0, Math.PI * 2);
+  ctx.fillStyle = color;
+  ctx.globalAlpha = 0.18;
+  ctx.fill();
+  ctx.globalAlpha = 1;
+  ctx.beginPath();
+  ctx.arc(x, y, r, 0, Math.PI * 2);
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2.4;
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(x, y, r * 0.4, 0, Math.PI * 2);
+  ctx.fillStyle = color;
+  ctx.fill();
+}
+
+interface BigTransform {
+  ox: number;
+  oy: number;
+  s2: number;
 }
 
 export function Minimap(): React.JSX.Element {
   const smallRef = useRef<HTMLCanvasElement>(null);
   const bigRef = useRef<HTMLCanvasElement>(null);
   const base = useRef<HTMLCanvasElement | null>(null);
+  const stops = useRef<TransitStop[] | null>(null);
+  const tf = useRef<BigTransform>({ ox: 0, oy: 0, s2: 1 });
   const mapOpen = useGame((s) => s.mapOpen);
 
   useEffect(() => {
@@ -140,8 +204,10 @@ export function Minimap(): React.JSX.Element {
     const loop = (): void => {
       id = requestAnimationFrame(loop);
       if (!base.current) {
-        if (isGeoLoaded()) base.current = buildBase();
-        else return;
+        if (isGeoLoaded()) {
+          base.current = buildBase();
+          stops.current = buildTransitStops(geo());
+        } else return;
       }
       drawSmall();
       if (useGame.getState().mapOpen) drawBig();
@@ -162,6 +228,11 @@ export function Minimap(): React.JSX.Element {
       const my = (z: number): number => (z - player.z) * S + VIEW / 2;
       const near = (x: number, y: number): boolean => x > -6 && x < VIEW + 6 && y > -6 && y < VIEW + 6;
 
+      for (const s of stops.current ?? []) {
+        const x = mx(s.x);
+        const y = my(s.z);
+        if (near(x, y)) stopSquare(ctx, x, y, 2.4);
+      }
       for (const l of LANDMARKS) {
         const x = mx(l.x);
         const y = my(l.z);
@@ -177,7 +248,7 @@ export function Minimap(): React.JSX.Element {
         const y = my(t.pos.z);
         if (near(x, y)) dot(ctx, x, y, t.line.color, 2.6);
       }
-      drawArrow(ctx, VIEW / 2, VIEW / 2, player.camYaw);
+      drawPlayer(ctx, VIEW / 2, VIEW / 2, player.camYaw, 1);
 
       ctx.fillStyle = 'rgba(230,237,243,0.85)';
       ctx.font = 'bold 11px Segoe UI, system-ui';
@@ -198,10 +269,13 @@ export function Minimap(): React.JSX.Element {
       const dh = b.height * s2;
       const ox = (BIG_W - dw) / 2;
       const oy = (BIG_H - dh) / 2;
+      tf.current = { ox, oy, s2 };
       ctx.drawImage(b, 0, 0, b.width, b.height, ox, oy, dw, dh);
 
       const bx = (x: number): number => ox + baseX(x) * s2;
       const bz = (z: number): number => oy + baseZ(z) * s2;
+
+      for (const s of stops.current ?? []) stopSquare(ctx, bx(s.x), bz(s.z), 2.2);
 
       ctx.textAlign = 'center';
       ctx.textBaseline = 'bottom';
@@ -214,12 +288,50 @@ export function Minimap(): React.JSX.Element {
         ctx.fillText(l.name, x, y - 5);
       }
       for (const t of registry.trams) dot(ctx, bx(t.pos.x), bz(t.pos.z), t.line.color, 4);
-      drawArrow(ctx, bx(player.x), bz(player.z), player.camYaw);
+
+      // Fast-travel portals — clickable destinations.
+      ctx.font = 'bold 12px Segoe UI, system-ui';
+      for (const p of PORTALS) {
+        const x = bx(p.x);
+        const y = bz(p.z);
+        portalRing(ctx, x, y, p.color, 7);
+        ctx.fillStyle = '#0b0f14';
+        ctx.fillText(p.name, x + 1, y - 9);
+        ctx.fillStyle = '#f4f9fd';
+        ctx.fillText(p.name, x, y - 10);
+      }
+
+      drawPlayer(ctx, bx(player.x), bz(player.z), player.camYaw, 1.25);
     };
 
     id = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(id);
   }, []);
+
+  // Click a portal on the big map to travel there.
+  const onBigClick = (e: React.MouseEvent<HTMLCanvasElement>): void => {
+    const cv = bigRef.current;
+    if (!cv) return;
+    const rect = cv.getBoundingClientRect();
+    const cx = ((e.clientX - rect.left) / rect.width) * BIG_W;
+    const cy = ((e.clientY - rect.top) / rect.height) * BIG_H;
+    const { ox, oy, s2 } = tf.current;
+    let best: (typeof PORTALS)[number] | null = null;
+    let bestD = 18; // px hit radius
+    for (const p of PORTALS) {
+      const px = ox + baseX(p.x) * s2;
+      const py = oy + baseZ(p.z) * s2;
+      const d = Math.hypot(px - cx, py - cy);
+      if (d < bestD) {
+        bestD = d;
+        best = p;
+      }
+    }
+    if (best) {
+      useGame.getState().teleport(best.x, best.z, best.name);
+      useGame.getState().closeMap();
+    }
+  };
 
   return (
     <>
@@ -231,10 +343,10 @@ export function Minimap(): React.JSX.Element {
           <div className="bigmap-head">
             <span>🗺️ Göteborg — karta</span>
             <span className="bigmap-hint">
-              <kbd>M</kbd> stäng
+              🌀 Klicka på en portal för att resa · <kbd>M</kbd> stäng
             </span>
           </div>
-          <canvas ref={bigRef} width={BIG_W} height={BIG_H} />
+          <canvas ref={bigRef} width={BIG_W} height={BIG_H} onClick={onBigClick} />
         </div>
       </div>
     </>
