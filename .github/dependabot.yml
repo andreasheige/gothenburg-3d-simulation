@@ -1,0 +1,18 @@
+# Weekly, grouped: one PR for all minor/patch updates per ecosystem, one for security fixes.
+# Majors stay separate PRs. Cooldown: no version younger than 7 days (security fixes are exempt).
+version: 2
+updates:
+  - package-ecosystem: npm
+    directories:
+      - "/"
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    groups:
+      minor-and-patch:
+        patterns: ["*"]
+        update-types: [minor, patch]
+      security:
+        applies-to: security-updates
+        patterns: ["*"]
